@@ -1,15 +1,19 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Mic, Package, Book, BarChart3, Settings, X } from 'lucide-react'
+import { LayoutDashboard, Mic, Package, Book, Receipt, BarChart3, Settings, X } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 function Sidebar({ isOpen, toggleSidebar }) {
+  const { t } = useLanguage()
+  
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Voice Billing', path: '/voice-billing', icon: Mic },
-    { name: 'Inventory', path: '/inventory', icon: Package },
-    { name: 'Udhar Khata', path: '/udhar', icon: Book },
-    { name: 'Reports', path: '/reports', icon: BarChart3 },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: t('dashboard'), path: '/', icon: LayoutDashboard },
+    { name: t('voiceBilling'), path: '/voice-billing', icon: Mic },
+    { name: t('inventory'), path: '/inventory', icon: Package },
+    { name: t('udharKhata'), path: '/udhar', icon: Book },
+    { name: t('billHistory'), path: '/bill-history', icon: Receipt },
+    { name: t('reports'), path: '/reports', icon: BarChart3 },
+    { name: t('settings'), path: '/settings', icon: Settings },
   ]
 
   return (

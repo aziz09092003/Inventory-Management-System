@@ -1,170 +1,220 @@
-import React, { useState } from 'react'
-import { Search, Plus, Edit, Trash2, Filter } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Search, Plus, Edit, Trash2, Filter, AlertCircle } from 'lucide-react'
+import { itemsAPI } from '../services/api'
+import { useLanguage } from '../contexts/LanguageContext'
 
 function Inventory() {
+  const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
-  const [items, setItems] = useState([
-    { id: 1, name: 'Sugar (Cheeni)', category: 'Groceries', stock: 45, unit: 'kg', price: 100 },
-    { id: 2, name: 'Rice (Chawal)', category: 'Groceries', stock: 80, unit: 'kg', price: 200 },
-    { id: 3, name: 'Tea (Chai)', category: 'Beverages', stock: 35, unit: 'packets', price: 150 },
-    { id: 4, name: 'Cooking Oil', category: 'Groceries', stock: 25, unit: 'liter', price: 400 },
-    { id: 5, name: 'Flour (Atta)', category: 'Groceries', stock: 60, unit: 'kg', price: 100 },
-    { id: 6, name: 'Milk Powder', category: 'Dairy', stock: 8, unit: 'packets', price: 850 },
-    { id: 7, name: 'Soap', category: 'Personal Care', stock: 40, unit: 'pieces', price: 80 },
-    { id: 8, name: 'Shampoo', category: 'Personal Care', stock: 22, unit: 'bottles', price: 250 },
-    { id: 9, name: 'Biscuits', category: 'Snacks', stock: 50, unit: 'packets', price: 60 },
-    { id: 10, name: 'Salt (Namak)', category: 'Groceries', stock: 30, unit: 'kg', price: 40 },
-  ])
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const categories = ['all', 'Groceries', 'Beverages', 'Dairy', 'Personal Care', 'Snacks']
+  const statusOptions = ['all', 'Critical', 'Low', 'Good']
+
+  // Supported Urdu units
+  const urduUnits = ['کلو', 'گرام', 'پاؤ', 'چھٹانک', 'لیٹر', 'ملی لیٹر', 'عدد', 'درجن', 'پیکٹ', 'ڈبہ', 'بوتل', 'بوری']
 
   // New item form state
   const [newName, setNewName] = useState('')
-  const [newCategory, setNewCategory] = useState('Groceries')
   const [newStock, setNewStock] = useState(0)
-  const [newUnit, setNewUnit] = useState('kg')
+  const [newUnit, setNewUnit] = useState('کلو')
   const [newPrice, setNewPrice] = useState(0)
 
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  // Load items from localStorage
+  useEffect(() => {
+    fetchItems()
+  }, [])
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      setItems(items.filter(item => item.id !== id))
+  const fetchItems = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await itemsAPI.getAll()
+      setItems(response.data)
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        setError('Please log in to view items (unauthorized).')
+      } else {
+        setError('Failed to load items. Please try again.')
+      }
+      console.error('Error fetching items:', err)
+      console.error('Error details:', err.response?.data || err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
   const getStockStatus = (stock) => {
+    if (stock === 0) return { text: 'Out of Stock', color: 'text-red-600 bg-red-100' }
     if (stock < 10) return { text: 'Critical', color: 'text-red-600 bg-red-100' }
     if (stock < 20) return { text: 'Low', color: 'text-yellow-600 bg-yellow-100' }
     return { text: 'Good', color: 'text-green-600 bg-green-100' }
   }
 
-  // load items from localStorage
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem('ims_items')
-      if (raw) setItems(JSON.parse(raw))
-    } catch (e) {
-      // ignore
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.item_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    const status = getStockStatus(item.stock_quantity)
+    const matchesStatus = selectedStatus === 'all' || status.text === selectedStatus
+    return matchesSearch && matchesStatus
+  })
+
+  const handleDelete = async (id) => {
+    if (window.confirm(t('confirmDelete'))) {
+      try {
+        await itemsAPI.delete(id)
+        setItems(items.filter(item => item.item_id !== id))
+      } catch (err) {
+        alert(t('failedToDelete') + ': ' + (err.response?.data?.detail || err.message))
+      }
     }
-  }, [])
+  }
 
-  // persist items
-  React.useEffect(() => {
-    try {
-      localStorage.setItem('ims_items', JSON.stringify(items))
-    } catch (e) {}
-  }, [items])
-
-  const handleAddItem = (e) => {
+  const handleAddItem = async (e) => {
     e.preventDefault()
-    const item = {
-      id: Date.now(),
-      name: newName || 'Unnamed Item',
-      category: newCategory,
-      stock: Number(newStock) || 0,
-      unit: newUnit || 'pcs',
-      price: Number(newPrice) || 0,
+    try {
+      const itemData = {
+        item_name: newName || 'Unnamed Item',
+        item_unit: newUnit || 'کلو',
+        unit_price: Number(newPrice) || 0,
+        stock_quantity: Number(newStock) || 0,
+      }
+      const response = await itemsAPI.create(itemData)
+      setItems([response.data, ...items])
+      setShowAddModal(false)
+      // reset form
+      setNewName('')
+      setNewStock(0)
+      setNewUnit('کلو')
+      setNewPrice(0)
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message
+      // If it's a validation error array, format it
+      if (Array.isArray(errorMsg)) {
+        const errors = errorMsg.map(e => e.msg).join(', ')
+        alert('Failed to add item: ' + errors)
+      } else {
+        alert('Failed to add item: ' + errorMsg)
+      }
+      console.error('Add item error:', err.response?.data)
     }
-    setItems([item, ...items])
-    setShowAddModal(false)
-    // reset form
-    setNewName('')
-    setNewCategory('Groceries')
-    setNewStock(0)
-    setNewUnit('kg')
-    setNewPrice(0)
   }
 
   const handleEditClick = (item) => {
     setEditingItem(item)
-    setNewName(item.name)
-    setNewCategory(item.category)
-    setNewStock(item.stock)
-    setNewUnit(item.unit)
-    setNewPrice(item.price)
+    setNewName(item.item_name)
+    setNewStock(item.stock_quantity)
+    setNewUnit(item.item_unit)
+    setNewPrice(item.unit_price)
     setShowEditModal(true)
   }
 
-  const handleEditItem = (e) => {
+  const handleEditItem = async (e) => {
     e.preventDefault()
-    const updatedItems = items.map(item => 
-      item.id === editingItem.id 
-        ? {
-            ...item,
-            name: newName || 'Unnamed Item',
-            category: newCategory,
-            stock: Number(newStock) || 0,
-            unit: newUnit || 'pcs',
-            price: Number(newPrice) || 0,
-          }
-        : item
-    )
-    setItems(updatedItems)
-    setShowEditModal(false)
-    setEditingItem(null)
-    // reset form
-    setNewName('')
-    setNewCategory('Groceries')
-    setNewStock(0)
-    setNewUnit('kg')
-    setNewPrice(0)
+    try {
+      const updateData = {
+        item_name: newName || 'Unnamed Item',
+        item_unit: newUnit || 'کلو',
+        unit_price: Number(newPrice) || 0,
+        stock_quantity: Number(newStock) || 0,
+      }
+      const response = await itemsAPI.update(editingItem.item_id, updateData)
+      const updatedItems = items.map(item => 
+        item.item_id === editingItem.item_id ? response.data : item
+      )
+      setItems(updatedItems)
+      setShowEditModal(false)
+      setEditingItem(null)
+      // reset form
+      setNewName('')
+      setNewStock(0)
+      setNewUnit('کلو')
+      setNewPrice(0)
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message
+      // If it's a validation error array, format it
+      if (Array.isArray(errorMsg)) {
+        const errors = errorMsg.map(e => e.msg).join(', ')
+        alert('Failed to update item: ' + errors)
+      } else {
+        alert('Failed to update item: ' + errorMsg)
+      }
+      console.error('Update item error:', err.response?.data)
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Sticky Header with Title and Add Button */}
-      <div className="sticky top-16 z-20 bg-gray-50 dark:bg-gray-900 py-4 -mx-4 px-4 md:-mx-6 md:px-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Inventory</h1>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 justify-center shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Add New Item
-          </button>
-        </div>
-      </div>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{t('inventory')}</h1>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <div>
+            <p className="text-red-800 font-medium">{error}</p>
+            <p className="text-red-600 text-sm">Unable to load items. Please refresh the page.</p>
+            <button 
+              onClick={fetchItems}
+              className="mt-2 text-sm bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading items...</p>
+        </div>
+      )}
+
+      {/* Filters Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search items..."
+              placeholder={t('searchItems')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
-          {/* Category Filter */}
-          <div className="relative">
+          {/* Status Filter */}
+          <div className="relative md:w-48">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full pl-10 pr-8 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
             >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat === 'all' ? 'All Categories' : cat}
+              {statusOptions.map(status => (
+                <option key={status} value={status}>
+                  {status === 'all' ? t('allStatus') : status}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Add Item Button */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 justify-center shadow-lg md:w-auto"
+          >
+            <Plus className="w-5 h-5" />
+            {t('addNewItem')}
+          </button>
         </div>
       </div>
 
@@ -175,33 +225,37 @@ function Inventory() {
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">#</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">Item Name</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">Category</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">Stock</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">Price</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">Status</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">Actions</th>
+                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('itemName')}</th>
+                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('stock')}</th>
+                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('price')}</th>
+                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('status')}</th>
+                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    No items found
+                  <td colSpan="7" className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  </td>
+                </tr>
+              ) : filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    {error ? 'Failed to load items' : t('noItemsFound')}
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item, index) => {
-                  const status = getStockStatus(item.stock)
+                  const status = getStockStatus(item.stock_quantity)
                   return (
-                    <tr key={item.id} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr key={item.item_id} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="py-4 px-6 text-gray-800 dark:text-white">{index + 1}</td>
-                      <td className="py-4 px-6 text-gray-800 dark:text-white font-medium">{item.name}</td>
-                      <td className="py-4 px-6 text-gray-600 dark:text-gray-400">{item.category}</td>
+                      <td className="py-4 px-6 text-gray-800 dark:text-white font-medium">{item.item_name}</td>
                       <td className="py-4 px-6 text-gray-800 dark:text-white">
-                        {item.stock} {item.unit}
+                        {item.stock_quantity} {item.item_unit}
                       </td>
-                      <td className="py-4 px-6 text-gray-800 dark:text-white">₨ {item.price}</td>
+                      <td className="py-4 px-6 text-gray-800 dark:text-white">₨ {item.unit_price}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
                           {status.text}
@@ -216,7 +270,7 @@ function Inventory() {
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDelete(item.item_id)}
                             className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -236,29 +290,19 @@ function Inventory() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Add New Item</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">{t('addNewItem')}</h2>
             <form className="space-y-4" onSubmit={handleAddItem}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Item Name
+                  {t('itemName')}
                 </label>
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="e.g., Sugar"
+                  placeholder={t('egSugar')}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category
-                </label>
-                <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                  {categories.filter(c => c !== 'all').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -277,18 +321,20 @@ function Inventory() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unit
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={newUnit}
                     onChange={(e) => setNewUnit(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="kg/ltr/pcs"
-                  />
+                  >
+                    {urduUnits.map(unit => (
+                      <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Unit Price (₨)
+                  {t('unitPrice')} (₨)
                 </label>
                 <input
                   type="number"
@@ -304,7 +350,7 @@ function Inventory() {
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
@@ -312,7 +358,7 @@ function Inventory() {
                   // onSubmit={}
                   
                 >
-                  Add Item
+                  {t('addItem')}
                 </button>
               </div>
             </form>
@@ -324,29 +370,19 @@ function Inventory() {
       {showEditModal && editingItem && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Edit Item</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">{t('editItem')}</h2>
             <form className="space-y-4" onSubmit={handleEditItem}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Item Name
+                  {t('itemName')}
                 </label>
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="e.g., Sugar"
+                  placeholder={t('egSugar')}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category
-                </label>
-                <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                  {categories.filter(c => c !== 'all').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -365,18 +401,20 @@ function Inventory() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unit
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={newUnit}
                     onChange={(e) => setNewUnit(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="kg/ltr/pcs"
-                  />
+                  >
+                    {urduUnits.map(unit => (
+                      <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Unit Price (₨)
+                  {t('unitPrice')} (₨)
                 </label>
                 <input
                   type="number"
@@ -393,20 +431,19 @@ function Inventory() {
                     setShowEditModal(false)
                     setEditingItem(null)
                     setNewName('')
-                    setNewCategory('Groceries')
                     setNewStock(0)
-                    setNewUnit('kg')
+                    setNewUnit('کلو')
                     setNewPrice(0)
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  Update Item
+                  {t('updateItem')}
                 </button>
               </div>
             </form>

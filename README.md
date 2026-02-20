@@ -4,12 +4,6 @@ A modern, responsive frontend application built with React.js and Tailwind CSS f
 
 ## 🎯 Features
 
-### � Authentication
-- User registration with validation
-- Secure login system
-- Password visibility toggle
-- User session management
-- Logout functionality
 
 ### �📊 Dashboard
 - Sales summary (Today, Weekly, Monthly)
@@ -30,7 +24,7 @@ A modern, responsive frontend application built with React.js and Tailwind CSS f
 - Add new items (modal interface)
 - Edit existing items (full CRUD)
 - Delete items with confirmation
-- LocalStorage persistence
+- **LocalStorage persistence** - All data saved in browser
 
 ### 📒 Udhar Khata (Credit Book)
 - Customer credit tracking
@@ -48,11 +42,6 @@ A modern, responsive frontend application built with React.js and Tailwind CSS f
 - Theme toggle (Light/Dark mode)
 - Voice model configuration
 - Language settings (English/Urdu/Bilingual)
-- User management system
-
-### 🔐 Login
-- Simple authentication
-- Voice login simulation
 
 ## 🚀 Technologies Used
 
@@ -98,12 +87,6 @@ The application is fully responsive and works seamlessly on:
 
 ## 🎮 Usage
 
-### Register & Login
-1. **First time?** Click "Register here" on login page
-2. Fill registration form with username, email, password
-3. Login with your credentials
-4. Or use "Login with Voice" for demo access
-
 ### Dashboard
 - View sales summary and quick stats
 - Click on quick action buttons to navigate
@@ -146,21 +129,20 @@ The production-ready files will be in the `dist` folder.
 
 ## 📝 Notes
 
-- This is a **frontend-only** demo application
+- This is a **frontend-only** application
+- **No authentication required** - Start using immediately
 - Voice recognition is **simulated** with mock data
-- No backend integration yet
-- All data is stored in component state (resets on refresh)
+- All data is stored in **browser localStorage** (persists across sessions)
+- No backend or database required - runs entirely in the browser
 
 ## 🎯 Future Enhancements
 
 - Real voice recognition API integration
-- Backend API with database
-- Real-time data synchronization
-- Print bill functionality
 - Export reports to PDF/Excel
 - Multi-language full support
-- User authentication with JWT
 - PWA support for offline usage
+- Cloud backup for localStorage data
+- Advanced analytics and insights
 
 ## 🌐 Browser Support
 
