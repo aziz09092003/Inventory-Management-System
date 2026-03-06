@@ -112,7 +112,10 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
         <div className="mt-6 flex gap-3 justify-center print:hidden">
           <button
             onClick={handlePrint}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-6 py-3 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+            style={{backgroundColor: '#2C5F6F'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
             <Printer className="w-5 h-5" />
             {t('print')}
@@ -155,7 +158,7 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg mt-6 overflow-hidden print:shadow-none print:mt-0">
         {/* Header with actions */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between print:hidden">
+        <div className="px-6 py-4 flex items-center justify-between print:hidden" style={{background: 'linear-gradient(to right, #2C5F6F, #234A57)'}}>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Printer className="w-6 h-6" />
             {t('viewReceipt')}
@@ -265,7 +268,10 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
         <div className="px-6 pb-6 print:hidden flex gap-3 justify-center">
           <button
             onClick={handlePrint}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-6 py-3 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+            style={{backgroundColor: '#2C5F6F'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
             <Printer className="w-5 h-5" />
             Print Receipt
@@ -317,7 +323,8 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
         {/* Print button - hidden when printing */}
         <button
           onClick={handlePrint}
-          className="absolute top-2 left-2 p-2 bg-white hover:bg-gray-100 rounded-full transition-colors print:hidden flex items-center gap-2 text-blue-600 shadow-lg border border-gray-200 z-10"
+          className="absolute top-2 left-2 p-2 bg-white hover:bg-gray-100 rounded-full transition-colors print:hidden flex items-center gap-2 shadow-lg border border-gray-200 z-10"
+          style={{color: '#2C5F6F'}}
         >
           <Printer className="w-5 h-5" />
         </button>
@@ -409,7 +416,10 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
         <div className="px-8 pb-8 print:hidden flex gap-3">
           <button
             onClick={handlePrint}
-            className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+            style={{backgroundColor: '#2C5F6F'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
             <Printer className="w-5 h-5" />
             Print Receipt

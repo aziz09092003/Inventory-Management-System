@@ -210,8 +210,11 @@ function UdharKhata() {
     .reduce((sum, c) => sum + c.paidAmount, 0)
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{t('udharKhata')}</h1>
+    <div className="space-y-4 mt-12">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t('udharKhata')}</h1>
+      </div>
 
       {/* Error Message */}
       {error && (
@@ -232,40 +235,40 @@ function UdharKhata() {
 
       {/* Loading State */}
       {loading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading data...</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
+          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">Loading data...</p>
         </div>
       )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+              <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('totalUnpaid')}</p>
-              <p className="text-2xl font-bold text-red-600">Rs {totalUnpaid.toLocaleString()}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('totalUnpaid')}</p>
+              <p className="text-xl font-bold text-red-600">Rs {totalUnpaid.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-6 text-white">
-          <p className="text-sm opacity-90 mb-1">{t('totalPaid')}</p>
-          <p className="text-3xl font-bold">Rs {totalPaid.toLocaleString()}</p>
-          <p className="text-sm mt-2 opacity-90">{t('completedPayments')}</p>
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
+          <p className="text-xs opacity-90 mb-0.5">{t('totalPaid')}</p>
+          <p className="text-2xl font-bold">Rs {totalPaid.toLocaleString()}</p>
+          <p className="text-xs mt-1.5 opacity-90">{t('completedPayments')}</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 rounded-lg" style={{backgroundColor: 'rgba(44, 95, 111, 0.1)'}}>
+              <Clock className="w-5 h-5" style={{color: '#2C5F6F'}} />
             </div>
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('totalCustomers')}</p>
-              <p className="text-2xl font-bold text-gray-800 dark:text-white">{customersWithUdhar.length}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('totalCustomers')}</p>
+              <p className="text-xl font-bold text-gray-800 dark:text-white">{customersWithUdhar.length}</p>
             </div>
           </div>
         </div>
@@ -273,16 +276,17 @@ function UdharKhata() {
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-        <div className="flex flex-col md:flex-row items-center gap-4">
+        <div className="flex flex-col md:flex-row items-center gap-3">
           {/* Search Bar */}
           <div className="relative flex-1 w-full md:max-w-lg">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('search') + ' ' + t('customerName').toLowerCase() + '...'}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm"
+              style={{outlineColor: '#2C5F6F'}}
             />
           </div>
 
@@ -292,7 +296,8 @@ function UdharKhata() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
+              className="w-full pl-10 pr-8 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
+              style={{outlineColor: '#2C5F6F'}}
             >
               {['all', 'unpaid', 'paid'].map(option => (
                 <option key={option} value={option}>
@@ -305,7 +310,10 @@ function UdharKhata() {
           {/* Add New Entry Button */}
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 justify-center shadow-lg w-full md:w-auto"
+            className="text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 justify-center shadow-lg w-full md:w-auto"
+            style={{backgroundColor: '#2C5F6F'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
             <Plus className="w-5 h-5" />
             {t('addNewEntry')}
@@ -317,7 +325,7 @@ function UdharKhata() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {loading ? (
           <div className="col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
@@ -367,7 +375,10 @@ function UdharKhata() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleAddUdharClick(customer)}
-                      className="text-sm bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="text-sm text-white px-4 py-1 rounded-lg transition-colors"
+                      style={{backgroundColor: '#2C5F6F'}}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                     >
                       {t('addUdhar')}
                     </button>
@@ -427,7 +438,10 @@ function UdharKhata() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 text-white px-4 py-2 rounded-lg transition-colors"
+                  style={{backgroundColor: '#2C5F6F'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                 >
                   {t('addEntry')}
                 </button>
@@ -497,7 +511,10 @@ function UdharKhata() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                  className="flex-1 text-white px-4 py-2 rounded-lg transition-colors font-semibold"
+                  style={{backgroundColor: '#2C5F6F'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                 >
                   {t('addUdhar')}
                 </button>

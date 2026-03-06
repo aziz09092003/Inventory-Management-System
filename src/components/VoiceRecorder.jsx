@@ -172,8 +172,11 @@ function VoiceRecorder({ onRecordingComplete, minDuration = 3, maxDuration = 15 
         className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
           isRecording 
             ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-            : 'bg-blue-500 hover:bg-blue-600'
+            : ''
         }`}
+        style={!isRecording ? {backgroundColor: '#2C5F6F'} : {}}
+        onMouseEnter={(e) => !isRecording && (e.target.style.backgroundColor = '#234A57')}
+        onMouseLeave={(e) => !isRecording && (e.target.style.backgroundColor = '#2C5F6F')}
       >
         {isRecording ? (
           <Square className="w-8 h-8 text-white" />

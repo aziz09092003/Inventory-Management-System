@@ -431,29 +431,34 @@ function VoiceBilling() {
   }, [billItems])
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Billing System</h1>
+    <div className="space-y-4 mt-12">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Billing System</h1>
+      </div>
       
       {/* Mode Toggle */}
       <div className="flex justify-end">
         <div className="flex gap-2 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg">
           <button
             onClick={() => setBillingMode('voice')}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-lg font-medium transition-colors text-sm ${
               billingMode === 'voice'
-                ? 'bg-blue-600 text-white'
+                ? 'text-white'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
+            style={billingMode === 'voice' ? {backgroundColor: '#2C5F6F'} : {}}
           >
             {t('voiceInputBilling')}
           </button>
           <button
             onClick={() => setBillingMode('manual')}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-lg font-medium transition-colors text-sm ${
               billingMode === 'manual'
-                ? 'bg-blue-600 text-white'
+                ? 'text-white'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
+            style={billingMode === 'manual' ? {backgroundColor: '#2C5F6F'} : {}}
           >
             {t('manualBilling')}
           </button>
@@ -470,8 +475,11 @@ function VoiceBilling() {
             className={`mb-6 w-32 h-32 rounded-full flex items-center justify-center transition-all ${
               isListening
                 ? 'bg-red-500 animate-pulse'
-                : 'bg-blue-500 hover:bg-blue-600'
+                : ''
             } shadow-lg`}
+            style={!isListening ? {backgroundColor: '#2C5F6F'} : {}}
+            onMouseEnter={(e) => !isListening && (e.target.style.backgroundColor = '#234A57')}
+            onMouseLeave={(e) => !isListening && (e.target.style.backgroundColor = '#2C5F6F')}
           >
             {isListening ? (
               <MicOff className="w-16 h-16 text-white" />
@@ -486,7 +494,7 @@ function VoiceBilling() {
 
           {/* Transcribed Text */}
           {transcript && (
-            <div className="w-full max-w-2xl bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4">
+            <div className="w-full max-w-2xl rounded-lg p-4 mb-4" style={{backgroundColor: 'rgba(44, 95, 111, 0.1)'}}>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Transcribed:</p>
               <p className="text-lg font-medium text-gray-800 dark:text-white">{transcript}</p>
             </div>
@@ -550,7 +558,7 @@ function VoiceBilling() {
 
             {loading ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
                 <p className="mt-4 text-gray-600 dark:text-gray-400">Loading items...</p>
               </div>
             ) : (
@@ -660,9 +668,12 @@ function VoiceBilling() {
                         disabled={item.stock_quantity <= 0}
                         className={`w-full font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md ${
                           item.stock_quantity > 0
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg'
+                            ? 'text-white'
                             : 'bg-gray-400 text-gray-600 cursor-not-allowed'
                         }`}
+                        style={item.stock_quantity > 0 ? {backgroundColor: '#2C5F6F'} : {}}
+                        onMouseEnter={(e) => item.stock_quantity > 0 && (e.target.style.backgroundColor = '#234A57')}
+                        onMouseLeave={(e) => item.stock_quantity > 0 && (e.target.style.backgroundColor = '#2C5F6F')}
                       >
                         <ShoppingCart className="w-5 h-5" />
                         {t('addToCart')}
@@ -749,8 +760,11 @@ function VoiceBilling() {
               className={`w-full mt-6 py-3 rounded-lg font-semibold transition-colors ${
                 loading
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : ''
               } text-white`}
+              style={!loading ? {backgroundColor: '#2C5F6F'} : {}}
+              onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#234A57')}
+              onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#2C5F6F')}
             >
               {loading ? t('processing') : t('generateBill')}
             </button>

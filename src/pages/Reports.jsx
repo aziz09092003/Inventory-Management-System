@@ -197,37 +197,41 @@ function Reports() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{t('reportsAnalytics')}</h1>
-        <button
-          onClick={fetchReportData}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-        >
-          {t('refresh')}
-        </button>
+    <div className="space-y-4 mt-12">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t('reportsAnalytics')}</h1>
+          <button
+            onClick={fetchReportData}
+            className="px-3 py-1.5 text-white rounded-lg hover:opacity-90 transition-colors text-xs"
+            style={{backgroundColor: '#2C5F6F'}}
+          >
+            {t('refresh')}
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading reports...</p>
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{borderColor: '#2C5F6F'}}></div>
+          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">Loading reports...</p>
         </div>
       ) : (
         <>
           {/* Filters */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-            <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex flex-col md:flex-row gap-3 items-end">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   {t('dateRange')}
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <select
                     value={dateRange}
                     onChange={(e) => setDateRange(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
                   >
                     <option value="today">{t('today')}</option>
                     <option value="week">{t('thisWeek')}</option>
@@ -261,37 +265,37 @@ function Reports() {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md p-6 text-white">
-              <p className="text-sm opacity-90 mb-1">{t('totalRevenue')}</p>
-              <p className="text-3xl font-bold">₨ {reportData.totalRevenue.toLocaleString()}</p>
-              <p className="text-sm mt-2 opacity-90">{dateRange === 'today' ? t('today') : `This ${dateRange}`}</p>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md p-4 text-white">
+              <p className="text-xs opacity-90 mb-0.5">{t('totalRevenue')}</p>
+              <p className="text-2xl font-bold">₨ {reportData.totalRevenue.toLocaleString()}</p>
+              <p className="text-xs mt-1.5 opacity-90">{dateRange === 'today' ? t('today') : `This ${dateRange}`}</p>
             </div>
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-6 text-white">
-              <p className="text-sm opacity-90 mb-1">{t('totalProfit')}</p>
-              <p className="text-3xl font-bold">₨ {reportData.totalProfit.toLocaleString()}</p>
-              <p className="text-sm mt-2 opacity-90">20% margin</p>
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
+              <p className="text-xs opacity-90 mb-0.5">{t('totalProfit')}</p>
+              <p className="text-2xl font-bold">₨ {reportData.totalProfit.toLocaleString()}</p>
+              <p className="text-xs mt-1.5 opacity-90">20% margin</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md p-6 text-white">
-              <p className="text-sm opacity-90 mb-1">{t('totalTransactions')}</p>
-              <p className="text-3xl font-bold">{reportData.totalTransactions}</p>
-              <p className="text-sm mt-2 opacity-90">Sales count</p>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
+              <p className="text-xs opacity-90 mb-0.5">{t('totalTransactions')}</p>
+              <p className="text-2xl font-bold">{reportData.totalTransactions}</p>
+              <p className="text-xs mt-1.5 opacity-90">Sales count</p>
             </div>
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-md p-6 text-white">
-              <p className="text-sm opacity-90 mb-1">{t('avgTransaction')}</p>
-              <p className="text-3xl font-bold">₨ {reportData.avgTransaction.toLocaleString()}</p>
-              <p className="text-sm mt-2 opacity-90">Per sale</p>
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-md p-4 text-white">
+              <p className="text-xs opacity-90 mb-0.5">{t('avgTransaction')}</p>
+              <p className="text-2xl font-bold">₨ {reportData.avgTransaction.toLocaleString()}</p>
+              <p className="text-xs mt-1.5 opacity-90">Per sale</p>
             </div>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Sales Trend Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('dailySalesTrend')}</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-4 h-4" style={{color: '#2C5F6F'}} />
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('dailySalesTrend')}</h2>
               </div>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={reportData.salesTrendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                   <XAxis dataKey="date" stroke="#6B7280" />

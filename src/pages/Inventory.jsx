@@ -148,8 +148,11 @@ function Inventory() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{t('inventory')}</h1>
+    <div className="space-y-4 mt-12">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t('inventory')}</h1>
+      </div>
 
       {/* Error Message */}
       {error && (
@@ -171,33 +174,35 @@ function Inventory() {
       {/* Loading State */}
       {loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading items...</p>
         </div>
       )}
 
       {/* Filters Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="flex flex-col md:flex-row gap-3">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               placeholder={t('searchItems')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white text-sm"
+              style={{outlineColor: '#2C5F6F'}}
             />
           </div>
 
           {/* Status Filter */}
           <div className="relative md:w-48">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full pl-10 pr-8 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
+              className="w-full pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer text-sm"
+              style={{outlineColor: '#2C5F6F'}}
             >
               {statusOptions.map(status => (
                 <option key={status} value={status}>
@@ -210,9 +215,12 @@ function Inventory() {
           {/* Add Item Button */}
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 justify-center shadow-lg md:w-auto"
+            className="text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 justify-center shadow-md md:w-auto text-sm"
+            style={{backgroundColor: '#2C5F6F'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             {t('addNewItem')}
           </button>
         </div>
@@ -224,19 +232,19 @@ function Inventory() {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">#</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('itemName')}</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('stock')}</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('price')}</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('status')}</th>
-                <th className="text-left py-4 px-6 text-gray-700 dark:text-gray-300 font-semibold">{t('actions')}</th>
+                <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300 font-semibold text-xs">#</th>
+                <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300 font-semibold text-xs">{t('itemName')}</th>
+                <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300 font-semibold text-xs">{t('stock')}</th>
+                <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300 font-semibold text-xs">{t('price')}</th>
+                <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300 font-semibold text-xs">{t('status')}</th>
+                <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300 font-semibold text-xs">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <td colSpan="7" className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
@@ -265,7 +273,8 @@ function Inventory() {
                         <div className="flex items-center gap-2">
                           <button 
                             onClick={() => handleEditClick(item)}
-                            className="text-blue-600 hover:text-blue-700 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                            className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                            style={{color: '#2C5F6F'}}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
@@ -354,7 +363,10 @@ function Inventory() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 text-white px-4 py-2 rounded-lg transition-colors"
+                  style={{backgroundColor: '#2C5F6F'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                   // onSubmit={}
                   
                 >
@@ -454,7 +466,10 @@ function Inventory() {
       {/* Floating Action Button (visible on mobile/when scrolled) */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all hover:scale-110 z-30 lg:hidden"
+        className="fixed bottom-6 right-6 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-30 lg:hidden"
+        style={{backgroundColor: '#2C5F6F'}}
+        onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+        onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
         title="Add New Item"
       >
         <Plus className="w-6 h-6" />

@@ -86,85 +86,87 @@ function BillHistory() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 mt-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <Receipt className="w-8 h-8 text-indigo-600" />
-            {t('billHistoryTitle')}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('viewAndManageBills')}</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Receipt className="w-6 h-6" style={{color: '#2C5F6F'}} />
+              {t('billHistoryTitle')}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">{t('viewAndManageBills')}</p>
+          </div>
         </div>
       </div>
 
       {/* Today's Summary Cards */}
       {todaySummary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="rounded-xl p-4 text-white shadow-md" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm">Today's Bills</p>
-                <p className="text-3xl font-bold mt-1">{todaySummary.total_bills}</p>
+                <p className="text-white opacity-80 text-xs">Today's Bills</p>
+                <p className="text-2xl font-bold mt-0.5">{todaySummary.total_bills}</p>
               </div>
-              <FileText className="w-12 h-12 text-blue-200" />
+              <FileText className="w-8 h-8 text-white opacity-70" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm">{t('todayTotal')}</p>
-                <p className="text-3xl font-bold mt-1">{formatCurrency(todaySummary.total_amount)}</p>
+                <p className="text-green-100 text-xs">{t('todayTotal')}</p>
+                <p className="text-2xl font-bold mt-0.5">{formatCurrency(todaySummary.total_amount)}</p>
               </div>
-              <TrendingUp className="w-12 h-12 text-green-200" />
+              <TrendingUp className="w-8 h-8 text-green-200" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm">{t('cashSales')}</p>
-                <p className="text-3xl font-bold mt-1">{formatCurrency(todaySummary.cash_amount)}</p>
+                <p className="text-purple-100 text-xs">{t('cashSales')}</p>
+                <p className="text-2xl font-bold mt-0.5">{formatCurrency(todaySummary.cash_amount)}</p>
               </div>
-              <DollarSign className="w-12 h-12 text-purple-200" />
+              <DollarSign className="w-8 h-8 text-purple-200" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl p-4 text-white shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-100 text-sm">{t('udharSales')}</p>
-                <p className="text-3xl font-bold mt-1">{formatCurrency(todaySummary.udhar_amount)}</p>
+                <p className="text-orange-100 text-xs">{t('udharSales')}</p>
+                <p className="text-2xl font-bold mt-0.5">{formatCurrency(todaySummary.udhar_amount)}</p>
               </div>
-              <Receipt className="w-12 h-12 text-orange-200" />
+              <Receipt className="w-8 h-8 text-orange-200" />
             </div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               placeholder={t('searchBillOrCustomer')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white text-sm"
             />
           </div>
 
           {/* Payment Type Filter */}
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white appearance-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white appearance-none text-sm"
             >
               <option value="all">{t('allBills')}</option>
               <option value="cash">{t('cashOnly')}</option>
@@ -175,25 +177,25 @@ function BillHistory() {
       </div>
 
       {/* Bills Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           </div>
         ) : filteredBills.length === 0 ? (
-          <div className="text-center py-12">
-            <Receipt className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">{t('noBillsFound')}</p>
+          <div className="text-center py-8">
+            <Receipt className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+            <p className="text-gray-600 dark:text-gray-400 text-sm">{t('noBillsFound')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     {t('billNumber')}
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     {t('customer')}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -254,7 +256,8 @@ function BillHistory() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleViewBill(bill)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                          style={{color: '#2C5F6F'}}
                           title="View Bill"
                         >
                           <Eye className="w-5 h-5" />

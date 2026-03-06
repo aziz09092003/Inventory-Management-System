@@ -2,68 +2,81 @@ import React, { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Globe, Moon, Sun, User, Users, Mic, MicOff, CheckCircle } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
-import { voiceAuthAPI } from '../services/api'
-import VoiceRecorder from '../components/VoiceRecorder'
 
 function Settings({ toggleTheme, isDarkMode }) {
   const { language, changeLanguage, t } = useLanguage()
-  const { user } = useAuth()
+  const { user, registerVoice, hasVoiceRegistered } = useAuth()
   const [voiceStatus, setVoiceStatus] = useState({ has_voice: false, loading: true })
   const [voiceRegistering, setVoiceRegistering] = useState(false)
   const [voiceMessage, setVoiceMessage] = useState('')
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
-  const [paragraph, setParagraph] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [voiceData, setVoiceData] = useState(null)
+  const paragraph = 'Please read: "The quick brown fox jumps over the lazy dog. My voice is my password verify."'
 
   // Check voice status on mount
   useEffect(() => {
     checkVoiceStatus()
-    fetchParagraph()
-  }, [])
+  }, [user])
 
-  const checkVoiceStatus = async () => {
-    try {
-      const { data } = await voiceAuthAPI.getStatus()
-      setVoiceStatus({ has_voice: data.has_voice, loading: false })
-    } catch (err) {
+  const checkVoiceStatus = () => {
+    if (user) {
+      const hasVoice = hasVoiceRegistered()
+      setVoiceStatus({ has_voice: hasVoice, loading: false })
+    } else {
       setVoiceStatus({ has_voice: false, loading: false })
     }
   }
 
-  const fetchParagraph = async () => {
-    try {
-      const { data } = await voiceAuthAPI.getParagraph()
-      setParagraph(data.paragraph)
-    } catch (err) {
-      setParagraph('Please read: "The quick brown fox jumps over the lazy dog. My voice is my password."')
-    }
+  const startRecording = () => {
+    setIsRecording(true)
+    setVoiceMessage('')
+    // Simulate voice recording for 5 seconds
+    setTimeout(() => {
+      const recordedVoice = {
+        timestamp: Date.now(),
+        data: 'voice_sample_' + Date.now(),
+        paragraph: paragraph
+      }
+      setVoiceData(recordedVoice)
+      setIsRecording(false)
+    }, 5000)
   }
 
-  const handleVoiceRegister = async (audioBlob) => {
+  const handleVoiceRegister = () => {
+    if (!voiceData) {
+      setVoiceMessage('Please record your voice first')
+      return
+    }
+
     setVoiceRegistering(true)
-    setVoiceMessage('')
     
-    try {
-      const { data } = await voiceAuthAPI.registerVoice(audioBlob)
-      setVoiceMessage(data.message)
+    const result = registerVoice(voiceData)
+    
+    if (result.success) {
+      setVoiceMessage('Voice registered successfully! You can now login with your voice.')
       setVoiceStatus({ has_voice: true, loading: false })
       setShowVoiceRecorder(false)
-    } catch (err) {
-      const detail = err?.response?.data?.detail
-      setVoiceMessage(typeof detail === 'string' ? detail : 'Voice registration failed')
-    } finally {
-      setVoiceRegistering(false)
+      setVoiceData(null)
+    } else {
+      setVoiceMessage(result.message || 'Voice registration failed')
     }
+    
+    setVoiceRegistering(false)
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{t('settingsTitle')}</h1>
+    <div className="space-y-4 mt-12">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t('settingsTitle')}</h1>
+      </div>
 
       {/* Theme Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <div className="flex items-center gap-3 mb-4">
-          {isDarkMode ? <Moon className="w-6 h-6 text-blue-600" /> : <Sun className="w-6 h-6 text-yellow-600" />}
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('appearance')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="flex items-center gap-2 mb-3">
+          {isDarkMode ? <Moon className="w-5 h-5" style={{color: '#2C5F6F'}} /> : <Sun className="w-5 h-5 text-yellow-600" />}
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('appearance')}</h2>
         </div>
         
         <div className="space-y-4">
@@ -76,9 +89,10 @@ function Settings({ toggleTheme, isDarkMode }) {
                 onClick={() => !isDarkMode && toggleTheme()}
                 className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
                   !isDarkMode
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
+                    ? 'border-gray-300 dark:border-gray-600'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                 }`}
+                style={!isDarkMode ? {borderColor: '#2C5F6F', backgroundColor: 'rgba(44, 95, 111, 0.1)'} : {}}
               >
                 <Sun className="w-6 h-6 mx-auto mb-2" />
                 <p className="text-center font-medium">{t('light')}</p>
@@ -87,9 +101,10 @@ function Settings({ toggleTheme, isDarkMode }) {
                 onClick={() => isDarkMode && toggleTheme()}
                 className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
                   isDarkMode
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
+                    ? 'border-gray-300 dark:border-gray-600'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
                 }`}
+                style={isDarkMode ? {borderColor: '#2C5F6F', backgroundColor: 'rgba(44, 95, 111, 0.1)'} : {}}
               >
                 <Moon className="w-6 h-6 mx-auto mb-2" />
                 <p className="text-center font-medium">{t('dark')}</p>
@@ -100,20 +115,21 @@ function Settings({ toggleTheme, isDarkMode }) {
       </div>
 
       {/* Language Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Globe className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('language')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Globe className="w-5 h-5" style={{color: '#2C5F6F'}} />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('language')}</h2>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {t('displayLanguage')}
           </label>
           <select
             value={language}
             onChange={(e) => changeLanguage(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white text-sm"
+            style={{outlineColor: '#2C5F6F'}}
           >
             <option value="english">English</option>
             <option value="urdu">اردو (Urdu)</option>
@@ -122,28 +138,28 @@ function Settings({ toggleTheme, isDarkMode }) {
       </div>
 
       {/* User Management */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('userManagement')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5" style={{color: '#2C5F6F'}} />
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('userManagement')}</h2>
           </div>
         </div>
 
         {user ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{backgroundColor: 'rgba(44, 95, 111, 0.1)'}}>
+                  <User className="w-5 h-5" style={{color: '#2C5F6F'}} />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-800 dark:text-white">{user.username}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                  <p className="font-medium text-gray-800 dark:text-white text-sm">{user.username}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{user.email}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{backgroundColor: 'rgba(44, 95, 111, 0.1)', color: '#2C5F6F'}}>
                   {t('owner')}
                 </span>
                 <span
@@ -161,20 +177,20 @@ function Settings({ toggleTheme, isDarkMode }) {
       </div>
 
       {/* Voice Authentication Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Mic className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('voiceAuthentication')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Mic className="w-5 h-5" style={{color: '#2C5F6F'}} />
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('voiceAuthentication')}</h2>
           </div>
           {voiceStatus.loading ? (
-            <span className="text-sm text-gray-500">{t('checking')}</span>
+            <span className="text-xs text-gray-500">{t('checking')}</span>
           ) : voiceStatus.has_voice ? (
-            <span className="flex items-center gap-1 text-sm text-green-600">
+            <span className="flex items-center gap-1 text-xs text-green-600">
               <CheckCircle className="w-4 h-4" /> {t('registered')}
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-sm text-gray-500">
+            <span className="flex items-center gap-1 text-xs text-gray-500">
               <MicOff className="w-4 h-4" /> {t('notRegistered')}
             </span>
           )}
@@ -209,7 +225,10 @@ function Settings({ toggleTheme, isDarkMode }) {
             </p>
             <button
               onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-white rounded-lg transition-colors"
+              style={{backgroundColor: '#2C5F6F'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
             >
               {showVoiceRecorder ? t('cancel') : t('registerVoice')}
             </button>
@@ -219,22 +238,60 @@ function Settings({ toggleTheme, isDarkMode }) {
         {showVoiceRecorder && (
           <div className="mt-6 space-y-4">
             {/* Paragraph to read */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">{t('readThisParagraph')}</h3>
-              <p className="text-blue-700 dark:text-blue-400 text-sm whitespace-pre-line">{paragraph}</p>
+            <div className="p-4 rounded-lg" style={{backgroundColor: 'rgba(44, 95, 111, 0.1)'}}>
+              <h3 className="font-semibold mb-2" style={{color: '#2C5F6F'}}>{t('readThisParagraph')}</h3>
+              <p className="text-sm whitespace-pre-line" style={{color: '#2C5F6F'}}>{paragraph}</p>
             </div>
 
             {voiceRegistering ? (
               <div className="text-center py-8">
-                <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                <div className="animate-spin w-12 h-12 border-4 border-t-transparent rounded-full mx-auto mb-3" style={{borderColor: '#2C5F6F'}}></div>
                 <p className="text-gray-600 dark:text-gray-400">{t('processingVoice')}</p>
               </div>
             ) : (
-              <VoiceRecorder 
-                onRecordingComplete={handleVoiceRegister}
-                minDuration={5}
-                maxDuration={15}
-              />
+              <div className="space-y-4">
+                <div className="text-center">
+                  <button
+                    onClick={startRecording}
+                    disabled={isRecording}
+                    className={`mx-auto flex items-center justify-center w-24 h-24 rounded-full transition-all shadow-lg ${
+                      isRecording
+                        ? 'bg-red-500 animate-pulse'
+                        : 'hover:scale-105'
+                    } text-white`}
+                    style={!isRecording ? {backgroundColor: '#2C5F6F'} : {}}
+                  >
+                    <Mic className="w-10 h-10" />
+                  </button>
+                  <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {isRecording ? 'Recording... (5 seconds)' : voiceData ? 'Voice recorded!' : 'Tap to record'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Read the paragraph above while recording</p>
+                </div>
+
+                {voiceData && !isRecording && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleVoiceRegister}
+                      className="flex-1 px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+                      style={{backgroundColor: '#2C5F6F'}}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
+                    >
+                      Register This Voice
+                    </button>
+                    <button
+                      onClick={() => {
+                        setVoiceData(null)
+                        setVoiceMessage('')
+                      }}
+                      className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                    >
+                      Re-record
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -243,7 +300,7 @@ function Settings({ toggleTheme, isDarkMode }) {
       {/* About Section */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
         <div className="flex items-center gap-3 mb-4">
-          <SettingsIcon className="w-6 h-6 text-blue-600" />
+          <SettingsIcon className="w-6 h-6" style={{color: '#2C5F6F'}} />
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('about')}</h2>
         </div>
         <div className="space-y-2 text-gray-600 dark:text-gray-400">

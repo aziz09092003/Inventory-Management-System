@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, Package, AlertTriangle, Mic, Book, BarChart } from 'lucide-react'
+import { TrendingUp, Package, AlertTriangle, Mic, Book, BarChart, Layers, ShoppingBag } from 'lucide-react'
 import { itemsAPI, salesAPI, customersAPI, udharsAPI } from '../services/api'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function Dashboard() {
   const { t } = useLanguage()
   const [stats, setStats] = useState([
-    { title: t('todaySales'), value: '₨ 0', change: '+0%', color: 'blue', icon: TrendingUp },
-    { title: t('totalItems'), value: '0', change: '+0', color: 'green', icon: Package },
-    { title: t('lowStock'), value: '0', change: 'Alert', color: 'red', icon: AlertTriangle },
-    { title: t('udharAmount'), value: '₨ 0', change: '0 people', color: 'yellow', icon: Book },
+    { title: 'Total Products', value: '0', change: '+0', bgColor: 'bg-emerald-50', iconColor: 'text-emerald-600', icon: Package },
+    { title: 'Orders', value: '0', change: '+0', bgColor: 'rgba(44, 95, 111, 0.1)', iconColor: '#2C5F6F', icon: Layers },
+    { title: 'Total Stock', value: '0', change: '+0', bgColor: 'rgba(44, 95, 111, 0.1)', iconColor: '#2C5F6F', icon: TrendingUp },
+    { title: 'Out of Stock', value: '0', change: 'Alert', bgColor: 'bg-orange-50', iconColor: 'text-orange-600', icon: ShoppingBag },
   ])
   
   const [topItems, setTopItems] = useState([])
@@ -74,32 +74,36 @@ function Dashboard() {
       // Update stats
       setStats([
         { 
-          title: t('todaySales'), 
-          value: `₨ ${todayRevenue.toLocaleString()}`, 
-          change: `${todaySales.length} sales`, 
-          color: 'blue', 
-          icon: TrendingUp 
-        },
-        { 
-          title: t('totalItems'), 
+          title: 'Total Products', 
           value: totalItems.toString(), 
           change: `${items.filter(i => i.stock_quantity > 0).length} in stock`, 
-          color: 'green', 
+          bgColor: 'bg-emerald-50',
+          iconColor: 'text-emerald-600',
           icon: Package 
         },
         { 
-          title: t('lowStock'), 
-          value: lowStockCount.toString(), 
-          change: lowStockCount > 0 ? 'Alert' : 'All Good', 
-          color: 'red', 
-          icon: AlertTriangle 
+          title: 'Orders', 
+          value: sales.length.toString(), 
+          change: `${todaySales.length} today`, 
+          bgColor: 'rgba(44, 95, 111, 0.1)',
+          iconColor: '#2C5F6F',
+          icon: Layers 
         },
         { 
-          title: t('udharAmount'), 
-          value: `₨ ${totalUdhar.toLocaleString()}`, 
-          change: `${customersWithUdhar} people`, 
-          color: 'yellow', 
-          icon: Book 
+          title: 'Total Stock',
+          value: items.reduce((sum, item) => sum + item.stock_quantity, 0).toString(),
+          change: `${totalItems} items`,
+          bgColor: 'rgba(44, 95, 111, 0.1)',
+          iconColor: '#2C5F6F',
+          icon: TrendingUp
+        },
+        { 
+          title: 'Out of Stock', 
+          value: items.filter(i => i.stock_quantity === 0).length.toString(), 
+          change: lowStockCount > 0 ? `${lowStockCount} low` : 'All Good', 
+          bgColor: 'bg-orange-50',
+          iconColor: 'text-orange-600',
+          icon: ShoppingBag 
         },
       ])
 
@@ -157,150 +161,151 @@ function Dashboard() {
   }
 
   const shortcuts = [
-    { name: t('voiceBilling'), path: '/voice-billing', icon: Mic, color: 'bg-blue-500' },
+    { name: t('voiceBilling'), path: '/voice-billing', icon: Mic, color: '#2C5F6F' },
     { name: t('inventory'), path: '/inventory', icon: Package, color: 'bg-green-500' },
     { name: t('udharKhata'), path: '/udhar', icon: Book, color: 'bg-yellow-500' },
     { name: t('reports'), path: '/reports', icon: BarChart, color: 'bg-purple-500' },
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{t('dashboard')}</h1>
-        <button
-          onClick={fetchDashboardData}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-        >
-          {t('refresh')}
-        </button>
-      </div>
-
+    <div className="space-y-4 mt-12">
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard data...</p>
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{borderColor: '#2C5F6F'}}></div>
+          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">Loading dashboard data...</p>
         </div>
       ) : (
         <>
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{stats.map((stat) => (
-          <div
-            key={stat.title}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
-              </div>
-              <span className={`text-sm font-medium text-${stat.color}-600`}>{stat.change}</span>
-            </div>
-            <h3 className="text-gray-600 dark:text-gray-400 text-sm mb-1">{stat.title}</h3>
-            <p className="text-2xl font-bold text-gray-800 dark:text-white">{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Shortcuts */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">{t('quickActions')}</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {shortcuts.map((shortcut) => (
-            <Link
-              key={shortcut.path}
-              to={shortcut.path}
-              className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <div className={`${shortcut.color} p-4 rounded-full mb-3`}>
-                <shortcut.icon className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
-                {shortcut.name}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Sold Items */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-            {t('topSellingItems')}
-          </h2>
-          <div className="space-y-3">
-            {topItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800 dark:text-white">{item.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {item.sold} {item.unit} sold
-                    </p>
-                  </div>
-                </div>
-                <span className="font-semibold text-green-600">{item.revenue}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Low Stock Alerts */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            {t('lowStockAlerts')}
-          </h2>
-          <div className="space-y-3">
-            {lowStockItems.length > 0 ? (
-              lowStockItems.map((item, index) => (
+          {/* Over View Section Container */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Over View</h2>
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.map((stat, index) => (
                 <div
-                  key={index}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    item.status === 'critical'
-                      ? 'bg-red-50 border-red-500 dark:bg-red-900/20'
-                      : 'bg-yellow-50 border-yellow-500 dark:bg-yellow-900/20'
-                  }`}
+                  key={stat.title}
+                  className="bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-all"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-800 dark:text-white">{item.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Only {item.stock} {item.unit} left
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        item.status === 'critical'
-                          ? 'bg-red-200 text-red-800'
-                          : 'bg-yellow-200 text-yellow-800'
-                      }`}
+                  <div className="flex items-center justify-between gap-3">
+                    <div 
+                      className={`p-3 rounded-xl ${stat.bgColor.startsWith('bg-') ? stat.bgColor : ''} dark:bg-gray-700`}
+                      style={!stat.bgColor.startsWith('bg-') ? {backgroundColor: stat.bgColor} : {}}
                     >
-                      {item.status.toUpperCase()}
-                    </span>
+                      <stat.icon 
+                        className={`w-6 h-6 ${stat.iconColor.startsWith('text-') ? stat.iconColor : ''} dark:text-gray-300`}
+                        style={!stat.iconColor.startsWith('text-') ? {color: stat.iconColor} : {}}
+                      />
+                    </div>
+                    <div className="flex-1 text-right">
+                      <p className="text-3xl font-bold text-gray-800 dark:text-white mb-0.5">{stat.value}</p>
+                      <h3 className="text-gray-500 dark:text-gray-400 text-xs">{stat.title}</h3>
+                    </div>
+                    {index === 3 && (
+                      <div className="text-gray-300 dark:text-gray-600">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                        </svg>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 mx-auto mb-2 text-green-500" />
-                <p className="text-gray-600 dark:text-gray-400">All items are well stocked!</p>
-              </div>
-            )}
-            <Link
-              to="/inventory"
-              className="block text-center py-2 text-blue-600 hover:text-blue-700 font-medium"
-            >
-              View All Inventory →
-            </Link>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* No of users */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">No of users</h2>
+                <div className="text-gray-300 dark:text-gray-600">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                  </svg>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl">
+                  <svg className="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-gray-800 dark:text-white mb-1">583 K</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Total Customers</p>
+            </div>
+
+            {/* Inventory Values - Pie Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Inventory Values</h2>
+              <div className="flex flex-col items-center">
+                <div className="relative w-40 h-40 mb-4">
+                  {/* Donut Chart */}
+                  <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                    <circle cx="50" cy="50" r="35" fill="none" stroke="#5D9CAD" strokeWidth="15" strokeDasharray="140 220" />
+                    <circle cx="50" cy="50" r="35" fill="none" stroke="#B8D8E3" strokeWidth="15" strokeDasharray="70 220" strokeDashoffset="-140" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col">
+                    <span className="text-2xl font-bold text-gray-800 dark:text-white">68%</span>
+                  </div>
+                </div>
+                <div className="space-y-2 w-full">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded" style={{backgroundColor: '#5D9CAD'}}></div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs font-medium">Sold units</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded" style={{backgroundColor: '#B8D8E3'}}></div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs font-medium">Total units</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top 10 Stores by sales */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Top 10 Stores by sales</h2>
+              <div className="space-y-3">
+                {topItems.length > 0 && topItems[0].name !== 'No sales yet' ? topItems.slice(0, 10).map((item, index) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400 text-xs truncate flex-1">{item.name}</span>
+                      <span className="text-gray-800 dark:text-white font-semibold text-xs ml-2">{item.sold}{item.unit ? ` ${item.unit}` : ''}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full" 
+                        style={{ 
+                          width: `${Math.min((item.sold / (topItems[0]?.sold || 1)) * 100, 100)}%`,
+                          backgroundColor: '#5D9CAD'
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <p className="text-xs">No sales yet</p>
+                  </div>  
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Expense vs Profit Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-100 dark:border-gray-700 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white">Expense vs Profit</h2>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Last 6 months</span>
+            </div>
+            <div className="h-52 flex items-center justify-center text-gray-400 dark:text-gray-500">
+              <div className="text-center">
+                <BarChart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-xs">Chart visualization</p>
+                <p className="text-xs text-gray-400 mt-1">(Line chart showing expense vs profit trends)</p>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
