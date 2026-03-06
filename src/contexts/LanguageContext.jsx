@@ -147,32 +147,14 @@ export const translations = {
     cannotDeleteCustomer: 'Cannot Delete Customer',
     stillHasPending: 'still has pending udhar of',
     collectRemaining: 'Please collect the remaining udhar amount before deleting this customer.',
-    close: 'Close',
     payUdharNow: 'Pay Udhar Now',
     currentAmount: 'Current Amount',
     paymentAmount: 'Payment Amount',
     enterAmountToPay: 'Enter amount to pay',
     remainingAmount: 'Remaining Amount',
-    submit: 'Submit',
     noCustomersFound: 'No customers found',
     processPayment: 'Process Payment',
     maximum: 'Maximum',
-    
-    // Voice Billing
-    manualBilling: 'Manual Billing',
-    voiceInputBilling: 'Voice Input Billing',
-    cart: 'Cart',
-    total: 'Total',
-    generateBill: 'Generate Bill',
-    clearCart: 'Clear Cart',
-    addToCart: 'Add to Cart',
-    
-    // Udhar Khata
-    udharManagement: 'Udhar Management',
-    addCustomer: 'Add Customer',
-    customerName: 'Customer Name',
-    totalUdhar: 'Total Udhar',
-    viewDetails: 'View Details',
     
     // Reports
     reportsAnalytics: 'Reports & Analytics',
@@ -243,7 +225,6 @@ export const translations = {
     // Voice Billing - Additional
     noItemsAdded: 'No items added yet. Use voice command to add items.',
     qty: 'Qty',
-    totalItems: 'Total Items',
     grandTotal: 'Grand Total',
     item: 'Item',
     completeBill: 'Complete Bill',
@@ -258,7 +239,6 @@ export const translations = {
     newTotal: 'New Total',
     noCustomerFound: 'No customer found with name',
     addCustomerFirst: 'Please add this customer in Udhar Khata first',
-    success: 'Success!',
     addedToUdhar: 'added to',
     udharAccount: "'s Udhar account.",
     inventoryUpdated: 'Inventory updated!',
@@ -273,12 +253,8 @@ export const translations = {
     visitAgain: 'Visit us again!',
     transactionCompleted: 'Transaction completed successfully',
     billGeneratedSuccess: 'Bill generated successfully! Inventory has been updated.',
-    addNewItem: 'Add New Item',
     editItem: 'Edit Item',
-    itemName: 'Item Name',
     egSugar: 'e.g., Sugar',
-    stock: 'Stock',
-    unit: 'Unit',
     unitPrice: 'Unit Price',
     addItem: 'Add Item',
     updateItem: 'Update Item',
@@ -304,14 +280,9 @@ export const translations = {
     noUserLoggedIn: 'No user logged in',
     active: 'Active',
     
-    // Reports - Additional
-    totalSale: 'Total Sale',
-    
     // Login/Register
     fullName: 'Full Name',
     confirmPassword: 'Confirm Password',
-    dontHaveAccount: "Don't have an account?",
-    alreadyHaveAccount: 'Already have an account?',
   },
   urdu: {
     // Common
@@ -450,32 +421,14 @@ export const translations = {
     cannotDeleteCustomer: 'گاہک حذف نہیں کر سکتے',
     stillHasPending: 'ابھی بھی باقی ہے ادھار',
     collectRemaining: 'براہ کرم اس گاہک کو حذف کرنے سے پہلے باقی ادھار رقم وصول کریں۔',
-    close: 'بند کریں',
     payUdharNow: 'ابھی ادھار ادا کریں',
     currentAmount: 'موجودہ رقم',
     paymentAmount: 'ادائیگی کی رقم',
     enterAmountToPay: 'ادا کرنے کی رقم درج کریں',
     remainingAmount: 'باقی رقم',
-    submit: 'جمع کرائیں',
     noCustomersFound: 'کوئی گاہک نہیں ملا',
     processPayment: 'ادائیگی کی کارروائی',
     maximum: 'زیادہ سے زیادہ',
-    
-    // Voice Billing
-    manualBilling: 'دستی بلنگ',
-    voiceInputBilling: 'آواز سے بلنگ',
-    cart: 'کارٹ',
-    total: 'کل',
-    generateBill: 'بل بنائیں',
-    clearCart: 'کارٹ صاف کریں',
-    addToCart: 'کارٹ میں شامل کریں',
-    
-    // Udhar Khata
-    udharManagement: 'ادھار مینجمنٹ',
-    addCustomer: 'نیا گاہک شامل کریں',
-    customerName: 'گاہک کا نام',
-    totalUdhar: 'کل ادھار',
-    viewDetails: 'تفصیلات دیکھیں',
     
     // Reports
     reportsAnalytics: 'رپورٹس اور تجزیہ',
@@ -545,7 +498,6 @@ export const translations = {
     // Voice Billing - Additional
     noItemsAdded: 'ابھی تک کوئی آئٹم شامل نہیں کیا گیا۔ آئٹم شامل کرنے کے لیے وائس کمانڈ استعمال کریں۔',
     qty: 'مقدار',
-    totalItems: 'کل اشیاء',
     grandTotal: 'مجموعی کل',
     item: 'آئٹم',
     completeBill: 'بل مکمل کریں',
@@ -560,7 +512,6 @@ export const translations = {
     newTotal: 'نیا کل',
     noCustomerFound: 'کوئی گاہک نہیں ملا',
     addCustomerFirst: 'براہ کرم پہلے اس گاہک کو ادھار کھاتہ میں شامل کریں',
-    success: 'کامیابی!',
     addedToUdhar: 'میں شامل',
     udharAccount: 'کے ادھار اکاؤنٹ میں۔',
     inventoryUpdated: 'انوینٹری اپ ڈیٹ ہو گئی!',
@@ -575,12 +526,8 @@ export const translations = {
     visitAgain: 'دوبارہ تشریف لائیں!',
     transactionCompleted: 'لین دین کامیابی سے مکمل ہو گیا',
     billGeneratedSuccess: 'بل کامیابی سے بن گیا! انوینٹری اپ ڈیٹ ہو گئی۔',
-    addNewItem: 'نیا آئٹم شامل کریں',
     editItem: 'آئٹم میں ترمیم کریں',
-    itemName: 'آئٹم کا نام',
     egSugar: 'مثال، چینی',
-    stock: 'اسٹاک',
-    unit: 'یونٹ',
     unitPrice: 'یونٹ کی قیمت',
     addItem: 'آئٹم شامل کریں',
     updateItem: 'آئٹم اپ ڈیٹ کریں',
@@ -606,14 +553,9 @@ export const translations = {
     noUserLoggedIn: 'کوئی صارف لاگ ان نہیں',
     active: 'فعال',
     
-    // Reports - Additional
-    totalSale: 'کل فروخت',
-    
     // Login/Register
     fullName: 'پورا نام',
     confirmPassword: 'پاس ورڈ کی تصدیق کریں',
-    dontHaveAccount: 'اکاؤنٹ نہیں ہے؟',
-    alreadyHaveAccount: 'پہلے سے اکاؤنٹ ہے؟',
   }
 }
 

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI, voiceAuthAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -8,84 +9,89 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in (from localStorage)
+    const token = localStorage.getItem('ims_token');
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    if (token && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error('Error parsing user data:', error);
+        localStorage.removeItem('ims_token');
+        localStorage.removeItem('user');
       }
     }
     setLoading(false);
   }, []);
 
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+  const login = async (credentials) => {
+    // credentials: { username, password }
+    const res = await authAPI.login(credentials);
+    // Fetch user list to get current user info by username
+    const usersRes = await authAPI.getUsers();
+    const currentUser = usersRes.data.find(
+      (u) => u.username === credentials.username
+    );
+    if (currentUser) {
+      setUser(currentUser);
+      localStorage.setItem('user', JSON.stringify(currentUser));
+    }
+    return res;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    authAPI.logout();
   };
 
-  const register = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+  const register = async (payload) => {
+    // payload: { username, email, password }
+    const res = await authAPI.register(payload);
+    return res;
   };
 
-  const registerVoice = (voiceData) => {
+  const registerVoice = async (voiceData) => {
     if (!user) {
       return { success: false, message: 'User must be logged in to register voice' };
     }
-
-    // Get all voice registrations
-    const voiceRegistrations = JSON.parse(localStorage.getItem('voice_registrations') || '{}');
-    
-    // Save voice data for current user
-    voiceRegistrations[user.username] = {
-      voiceData: voiceData,
-      registeredAt: new Date().toISOString()
-    };
-
-    localStorage.setItem('voice_registrations', JSON.stringify(voiceRegistrations));
-
-    // Update user object
-    const updatedUser = { ...user, voiceRegistered: true };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-
-    return { success: true, message: 'Voice registered successfully' };
+    try {
+      await voiceAuthAPI.saveVoiceSamples({
+        email: user.email,
+        samples: voiceData.samples,
+      });
+      const updatedUser = { ...user, voiceRegistered: true };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return { success: true, message: 'Voice registered successfully' };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.detail || 'Voice registration failed' };
+    }
   };
 
-  const loginWithVoice = (voiceData) => {
-    // Get all voice registrations
-    const voiceRegistrations = JSON.parse(localStorage.getItem('voice_registrations') || '{}');
-    
-    // Simple voice matching (in real app, use ML/AI for voice recognition)
-    // For demo, we'll match based on timing pattern
-    for (const [username, registration] of Object.entries(voiceRegistrations)) {
-      // Simulate voice matching (in production, use actual voice comparison)
-      const timeDiff = Math.abs(voiceData.timestamp - registration.voiceData.timestamp);
-      if (timeDiff < 10000) { // Within 10 seconds range (demo matching)
-        // Get user details
-        const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
-        const userData = users.find(u => u.username === username);
-        
-        if (userData) {
-          login({ username: userData.username, email: userData.email, voiceRegistered: true });
-          return { success: true, message: 'Voice login successful' };
-        }
+  const loginWithVoice = async (voiceData) => {
+    // voiceData: { email, audio_base64 }
+    try {
+      const res = await voiceAuthAPI.loginWithVoice({
+        email: voiceData.email,
+        audio_base64: voiceData.audio_base64,
+      });
+      // Fetch user info after voice login
+      const usersRes = await authAPI.getUsers();
+      const currentUser = usersRes.data.find(
+        (u) => u.email === voiceData.email
+      );
+      if (currentUser) {
+        setUser(currentUser);
+        localStorage.setItem('user', JSON.stringify(currentUser));
       }
+      return { success: true, message: 'Voice login successful' };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.detail || 'Voice not recognized' };
     }
-
-    return { success: false, message: 'Voice not recognized. Please register your voice first.' };
   };
 
   const hasVoiceRegistered = () => {
     if (!user) return false;
-    const voiceRegistrations = JSON.parse(localStorage.getItem('voice_registrations') || '{}');
-    return !!voiceRegistrations[user.username];
+    return !!user.voiceRegistered;
   };
 
   return (

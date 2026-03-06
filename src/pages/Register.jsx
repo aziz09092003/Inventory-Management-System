@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../services/api';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
@@ -13,6 +14,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -46,36 +48,29 @@ const Register = () => {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!validateForm()) return;
 
-    const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
-
-    if (users.some(u => u.username === formData.username)) {
-      setError('Username already exists');
-      return;
+    setIsLoading(true);
+    try {
+      await authAPI.register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    if (users.some(u => u.email === formData.email)) {
-      setError('Email already registered');
-      return;
-    }
-
-    users.push({
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      createdAt: new Date().toISOString()
-    });
-
-    localStorage.setItem('registered_users', JSON.stringify(users));
-    setSuccess(true);
-
-    setTimeout(() => {
-      navigate('/login');
-    }, 2000);
   };
 
   if (success) {
@@ -240,12 +235,13 @@ const Register = () => {
               {/* Register Button */}
               <button
                 type="submit"
-                className="w-full text-white py-2.5 rounded-lg font-semibold hover:opacity-90 transition-all shadow text-sm"
+                disabled={isLoading}
+                className="w-full text-white py-2.5 rounded-lg font-semibold hover:opacity-90 transition-all shadow text-sm disabled:opacity-50"
                 style={{ backgroundColor: '#2C5F6F' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
+                onMouseEnter={(e) => !isLoading && (e.target.style.backgroundColor = '#234A57')}
+                onMouseLeave={(e) => !isLoading && (e.target.style.backgroundColor = '#2C5F6F')}
               >
-                Create Account
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </button>
             </div>
           </form>

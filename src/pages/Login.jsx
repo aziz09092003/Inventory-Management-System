@@ -6,15 +6,17 @@ import { User, Lock, Mic } from 'lucide-react';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [error, setError] = useState('');
   const [showVoiceLogin, setShowVoiceLogin] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [voiceData, setVoiceData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { login, loginWithVoice } = useAuth();
   const navigate = useNavigate();
 
-  const handleEmailLogin = (e) => {
+  const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -23,38 +25,72 @@ const Login = () => {
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (user) {
-      login({ username: user.username, email: user.email });
+    setIsLoading(true);
+    try {
+      await login({ username, password });
       navigate('/');
-    } else {
-      setError('Invalid username or password');
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Invalid username or password');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleVoiceLogin = async () => {
     setError('');
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
     if (!voiceData) {
       setError('Please record your voice first');
       return;
     }
-    const result = loginWithVoice(voiceData);
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.message || 'Voice authentication failed');
+    setIsLoading(true);
+    try {
+      const result = await loginWithVoice({ email, audio_base64: voiceData.audio_base64 });
+      if (result.success) {
+        navigate('/');
+      } else {
+        setError(result.message || 'Voice authentication failed');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Voice authentication failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const startRecording = () => {
+  const startRecording = async () => {
     setIsRecording(true);
     setError('');
-    setTimeout(() => {
-      setVoiceData({ timestamp: Date.now(), data: 'voice_sample_' + Date.now() });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result.split(',')[1];
+          setVoiceData({ audio_base64: base64 });
+        };
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setTimeout(() => {
+        mediaRecorder.stop();
+        setIsRecording(false);
+      }, 3000);
+    } catch (err) {
+      setError('Microphone access denied');
       setIsRecording(false);
-    }, 3000);
+    }
   };
 
   return (
@@ -169,10 +205,11 @@ const Login = () => {
                   {/* Login Button */}
                   <button
                     type="submit"
-                    className="w-full text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm shadow"
+                    disabled={isLoading}
+                    className="w-full text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm shadow disabled:opacity-50"
                     style={{ backgroundColor: '#2563EB' }}
                   >
-                    Log in
+                    {isLoading ? 'Logging in...' : 'Log in'}
                   </button>
                 </div>
               </form>
@@ -211,6 +248,18 @@ const Login = () => {
                 </div>
               )}
 
+              {/* Email for voice login */}
+              <div className="relative mb-3">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:border-blue-400 transition"
+                  placeholder="Enter your email"
+                />
+              </div>
+
               <p className="text-xs text-gray-500 mb-5">Click the microphone and speak clearly for 3 seconds</p>
 
               <div className="flex flex-col items-center gap-4">
@@ -231,10 +280,11 @@ const Login = () => {
               {voiceData && (
                 <button
                   onClick={handleVoiceLogin}
-                  className="w-full mt-4 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm shadow"
+                  disabled={isLoading}
+                  className="w-full mt-4 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm shadow disabled:opacity-50"
                   style={{ backgroundColor: '#2563EB' }}
                 >
-                  Login with Voice
+                  {isLoading ? 'Authenticating...' : 'Login with Voice'}
                 </button>
               )}
 
