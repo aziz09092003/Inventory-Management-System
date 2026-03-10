@@ -13,7 +13,7 @@ import plotly.io as pio
 # LOAD FONT (Arabic/Urdu supporting font)
 # ======================================================
 # Replace with a font that supports Arabic script
-font_path = r"C:\FYP\Backend\fast-api\myapp\fonts\NotoSansArabic-Regular.ttf"
+font_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fonts", "NotoSansArabic-Regular.ttf")
 
 if not os.path.exists(font_path):
     raise Exception("Font file not found!")

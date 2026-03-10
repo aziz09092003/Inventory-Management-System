@@ -181,6 +181,17 @@ export const billItemsAPI = {
         created_date: billItem.created_date || null,
       })
     ),
+
+  createBatch: (items) =>
+    wrapResponse(
+      api.post('/billitems/batch', {
+        items: items.map(item => ({
+          item_name: item.item_name,
+          quantity: item.quantity,
+          requested_unit: item.requested_unit,
+        })),
+      })
+    ),
 }
 
 // ==================== BILLS API ====================

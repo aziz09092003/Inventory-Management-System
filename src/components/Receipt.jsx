@@ -103,8 +103,8 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
 
           {/* Additional Info */}
           <div className="text-center text-xs text-gray-500 dark:text-gray-400 space-y-1">
-            <p>Visit us again!</p>
-            <p className="text-[10px]">Transaction completed successfully</p>
+            <p>{t('visitAgain')}</p>
+            <p className="text-[10px]">{t('transactionCompleted')}</p>
           </div>
         </div>
 
@@ -125,7 +125,7 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
           >
             <RotateCcw className="w-5 h-5" />
-            New Bill
+            {t('newBill')}
           </button>
         </div>
 
@@ -274,13 +274,13 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
             onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
             <Printer className="w-5 h-5" />
-            Print Receipt
+            {t('printReceipt')}
           </button>
           <button
             onClick={onClose}
             className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
           >
-            New Bill
+            {t('newBill')}
           </button>
         </div>
 
@@ -406,8 +406,8 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
 
           {/* Additional Info */}
           <div className="text-center text-xs text-gray-500 space-y-1">
-            <p>Visit us again!</p>
-            <p className="text-[10px]">Transaction completed successfully</p>
+            <p>{t('visitAgain')}</p>
+            <p className="text-[10px]">{t('transactionCompleted')}</p>
             <p className="text-[10px]">Vendor ID: 987654-321</p>
           </div>
         </div>
@@ -422,13 +422,13 @@ function Receipt({ billItems, total, customer, onClose, embedded = false, inline
             onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
           >
             <Printer className="w-5 h-5" />
-            Print Receipt
+            {t('printReceipt')}
           </button>
           <button
             onClick={onClose}
             className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
           >
-            Close
+            {t('close')}
           </button>
         </div>
       </div>

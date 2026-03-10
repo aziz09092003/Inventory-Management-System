@@ -42,6 +42,17 @@ myapp.add_middleware(
 # error_map is defined in myapp.utils.errors to avoid circular imports
 from myapp.utils.errors import error_map
 
+# Helper: add CORS headers to error responses so the browser doesn't block them
+def _cors_headers(request: Request) -> dict:
+    origin = request.headers.get("origin", "")
+    allowed = {"http://127.0.0.1:5173", "http://localhost:5173"}
+    if origin in allowed:
+        return {
+            "access-control-allow-origin": origin,
+            "access-control-allow-credentials": "true",
+        }
+    return {}
+
 # ✅ HTTPException handler
 @myapp.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
@@ -49,15 +60,16 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": error_label, "detail": exc.detail},
+        headers=_cors_headers(request),
     )
 
 # ✅ ValueError handler (common for manual checks)
 @myapp.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
-    # map Python ValueError to 400 with Urdu label
     return JSONResponse(
         status_code=400,
         content={"error": "غلط ویلیو", "detail": str(exc)},
+        headers=_cors_headers(request),
     )
 
 # ✅ Request validation errors (body/query/path validation)
@@ -65,17 +77,16 @@ from fastapi.exceptions import RequestValidationError
 
 @myapp.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    # exc.errors() returns a list of validation issues
     cleaned_errors = []
     for err in exc.errors():
         if "ctx" in err:
-            # Convert any non-serializable objects (like ValueError) to strings
             err["ctx"] = {k: str(v) for k, v in err["ctx"].items()}
         cleaned_errors.append(err)
 
     return JSONResponse(
         status_code=422,
         content={"error": "غلط ڈیٹا", "detail": cleaned_errors},
+        headers=_cors_headers(request),
     )
 
 # ✅ General Exception handler
@@ -84,6 +95,7 @@ async def custom_general_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"error": "سرور کی خرابی", "detail": str(exc)},
+        headers=_cors_headers(request),
     )
 
 # Routers

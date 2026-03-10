@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { DollarSign, TrendingUp, Package, RefreshCw, ArrowLeft, CheckCircle, XCircle, Calendar, Clock, PieChart, BarChart3, Target, Award, Filter, Search, Eye, Printer } from 'lucide-react'
 import { PieChart as RechartsPie, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { billsAPI, itemsAPI, salesAPI } from '../services/api'
+import { billsAPI, itemsAPI, salesAPI, customersAPI } from '../services/api'
+import AlertDialog from '../components/AlertDialog'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function Sales() {
@@ -20,6 +21,12 @@ function Sales() {
   const [returnType, setReturnType] = useState('full') // 'full' or 'partial'
   const [returns, setReturns] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [customersMap, setCustomersMap] = useState({})
+  const [alertDialog, setAlertDialog] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null, onCancel: null, showCancel: false, confirmText: '', cancelText: '' })
+
+  const showAlert = (type, title, message) => {
+    setAlertDialog({ open: true, type, title, message, onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })), onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })), showCancel: false, confirmText: '', cancelText: '' })
+  }
   
   // Analytics State
   const [dateRange, setDateRange] = useState('today')
@@ -39,12 +46,18 @@ function Sales() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [billsRes, itemsRes, salesRes, returnsData] = await Promise.all([
-        billsAPI.getAll(),
-        itemsAPI.getAll(),
-        salesAPI.getAll(),
+      const [billsRes, itemsRes, salesRes, custRes, returnsData] = await Promise.all([
+        billsAPI.getAll().catch(() => ({ data: [] })),
+        itemsAPI.getAll().catch(() => ({ data: [] })),
+        salesAPI.getAll().catch(() => ({ data: [] })),
+        customersAPI.getAll().catch(() => ({ data: [] })),
         loadReturns()
       ])
+
+      // Build customer lookup
+      const cMap = {}
+      ;(custRes.data || []).forEach(c => { cMap[c.customer_id] = c.customer_name })
+      setCustomersMap(cMap)
       
       setBills(billsRes.data || [])
       setItems(itemsRes.data || [])
@@ -79,7 +92,7 @@ function Sales() {
   const calculateAnalytics = (billsData, itemsData, salesData) => {
     const { start, end } = getDateRange()
     const filteredBills = billsData.filter(bill => {
-      const billDate = new Date(bill.created_at)
+      const billDate = new Date(bill.bill_date)
       return billDate >= start && billDate <= end
     })
 
@@ -90,8 +103,10 @@ function Sales() {
     }
     
     filteredBills.forEach(bill => {
-      const hour = new Date(bill.created_at).getHours()
-      hourlyData[hour].sales += bill.total_amount
+      // Use bill_time if available, else fallback to bill_date
+      const timeParts = bill.bill_time?.split(':')
+      const hour = timeParts ? parseInt(timeParts[0]) : new Date(bill.bill_date).getHours()
+      hourlyData[hour].sales += bill.effective_total || 0
       hourlyData[hour].count += 1
     })
     
@@ -105,7 +120,7 @@ function Sales() {
         if (!categoryData[category]) {
           categoryData[category] = { name: category, value: 0, count: 0 }
         }
-        categoryData[category].value += item.total_price || (item.quantity * item.unit_price)
+        categoryData[category].value += item.total_amount || (item.quantity * item.unit_price)
         categoryData[category].count += item.quantity
       })
     })
@@ -114,11 +129,11 @@ function Sales() {
     // Payment Method Breakdown
     const paymentData = {}
     filteredBills.forEach(bill => {
-      const method = bill.payment_type || 'cash'
+      const method = bill.status === 'paid' ? 'cash' : 'udhar'
       if (!paymentData[method]) {
         paymentData[method] = { name: method, value: 0, count: 0 }
       }
-      paymentData[method].value += bill.total_amount
+      paymentData[method].value += bill.effective_total || 0
       paymentData[method].count += 1
     })
     const paymentMethodBreakdown = Object.values(paymentData)
@@ -127,15 +142,15 @@ function Sales() {
     const itemSales = {}
     filteredBills.forEach(bill => {
       bill.items?.forEach(item => {
-        if (!itemSales[item.item_id]) {
-          itemSales[item.item_id] = {
+        if (!itemSales[item.item_name]) {
+          itemSales[item.item_name] = {
             name: item.item_name,
             quantity: 0,
             revenue: 0
           }
         }
-        itemSales[item.item_id].quantity += item.quantity
-        itemSales[item.item_id].revenue += item.total_price || (item.quantity * item.unit_price)
+        itemSales[item.item_name].quantity += item.quantity
+        itemSales[item.item_name].revenue += item.total_amount || (item.quantity * item.unit_price)
       })
     })
     const topSellingItems = Object.values(itemSales)
@@ -154,7 +169,7 @@ function Sales() {
       .slice(0, 10)
 
     // Sales Targets
-    const totalRevenue = filteredBills.reduce((sum, bill) => sum + bill.total_amount, 0)
+    const totalRevenue = filteredBills.reduce((sum, bill) => sum + (bill.effective_total || 0), 0)
     const salesTarget = dateRange === 'today' ? 10000 : dateRange === 'week' ? 50000 : dateRange === 'month' ? 200000 : 1000000
     
     setAnalyticsData({
@@ -215,13 +230,13 @@ function Sales() {
 
   const toggleReturnItem = (itemId) => {
     setReturnItems(prev => prev.map(item => 
-      item.item_id === itemId ? { ...item, selected: !item.selected, returnQty: !item.selected ? item.quantity : 0 } : item
+      item.item_name === itemId ? { ...item, selected: !item.selected, returnQty: !item.selected ? item.quantity : 0 } : item
     ))
   }
 
   const updateReturnQty = (itemId, qty) => {
     setReturnItems(prev => prev.map(item => 
-      item.item_id === itemId ? { ...item, returnQty: Math.min(Math.max(0, qty), item.quantity) } : item
+      item.item_name === itemId ? { ...item, returnQty: Math.min(Math.max(0, qty), item.quantity) } : item
     ))
   }
 
@@ -233,12 +248,12 @@ function Sales() {
       : returnItems.filter(item => item.selected && item.returnQty > 0)
 
     if (itemsToReturn.length === 0) {
-      alert('Please select items to return')
+      showAlert('warning', t('alertWarning'), t('pleaseSelectItemsToReturn'))
       return
     }
 
     if (!returnReason.trim()) {
-      alert('Please provide a return reason')
+      showAlert('warning', t('alertWarning'), t('pleaseProvideReturnReason'))
       return
     }
 
@@ -252,9 +267,9 @@ function Sales() {
       // Update inventory - add stock back
       for (const item of itemsToReturn) {
         const qty = returnType === 'full' ? item.quantity : item.returnQty
-        const currentItem = items.find(i => i.item_id === item.item_id)
+        const currentItem = items.find(i => i.item_name === item.item_name)
         if (currentItem) {
-          await itemsAPI.update(item.item_id, {
+          await itemsAPI.update(currentItem.item_id, {
             stock_quantity: currentItem.stock_quantity + qty
           })
         }
@@ -264,8 +279,8 @@ function Sales() {
       const returnRecord = {
         return_id: Date.now(),
         bill_id: selectedBill.bill_id,
-        bill_number: selectedBill.bill_number,
-        customer_name: selectedBill.customer_name,
+        bill_number: String(selectedBill.bill_id),
+        customer_name: getCustomerName(selectedBill),
         return_type: returnType,
         items: itemsToReturn.map(item => ({
           ...item,
@@ -284,12 +299,12 @@ function Sales() {
       // Update bill status
       // In a real system, you'd update the bill to mark it as returned
       
-      alert(`Return processed successfully!\nRefund Amount: ₨${refundAmount.toFixed(2)}`)
+      showAlert('success', t('alertSuccess'), t('returnProcessedSuccess') + '\n' + t('refundAmountLabel').replace('{amount}', refundAmount.toFixed(2)))
       setShowReturnModal(false)
       loadData()
     } catch (error) {
       console.error('Error processing return:', error)
-      alert('Failed to process return. Please try again.')
+      showAlert('error', t('alertError'), t('failedToProcessReturn'))
     }
   }
 
@@ -298,9 +313,11 @@ function Sales() {
 
   const COLORS = ['#2C5F6F', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
 
+  const getCustomerName = (bill) => customersMap[bill.customer_id] || ''
+
   const filteredBills = bills.filter(bill => 
-    bill.bill_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bill.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    String(bill.bill_id).includes(searchTerm) ||
+    getCustomerName(bill).toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   if (loading) {
@@ -319,10 +336,10 @@ function Sales() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <DollarSign className="w-6 h-6" style={{color: '#2C5F6F'}} />
-              Sales Management & Analytics
+              {t('salesManagement')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-              Advanced sales analytics, returns processing, and performance tracking
+              {t('salesDescription')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -332,10 +349,10 @@ function Sales() {
               className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
               style={{outlineColor: '#2C5F6F'}}
             >
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="year">Last Year</option>
+              <option value="today">{t('today')}</option>
+              <option value="week">{t('last7Days')}</option>
+              <option value="month">{t('last30Days')}</option>
+              <option value="year">{t('lastYear')}</option>
             </select>
           </div>
         </div>
@@ -351,7 +368,7 @@ function Sales() {
           style={activeTab === 'analytics' ? {backgroundColor: '#2C5F6F'} : {}}
         >
           <BarChart3 className="w-5 h-5 inline mr-2" />
-          Sales Analytics
+          {t('salesAnalytics')}
         </button>
         <button
           onClick={() => setActiveTab('returns')}
@@ -361,7 +378,7 @@ function Sales() {
           style={activeTab === 'returns' ? {backgroundColor: '#2C5F6F'} : {}}
         >
           <RefreshCw className="w-5 h-5 inline mr-2" />
-          Returns & Refunds
+          {t('returnsAndRefunds')}
         </button>
       </div>
 
@@ -373,10 +390,10 @@ function Sales() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <Target className="w-5 h-5" style={{color: '#2C5F6F'}} />
-                Sales Target Progress
+                {t('salesTargetProgress')}
               </h2>
               <div className="text-right">
-                <p className="text-xs text-gray-600 dark:text-gray-400">Target: {formatCurrency(analyticsData.salesTargets.target)}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('targetLabel')}: {formatCurrency(analyticsData.salesTargets.target)}</p>
                 <p className="text-xl font-bold" style={{color: '#2C5F6F'}}>
                   {analyticsData.salesTargets.percentage}%
                 </p>
@@ -400,7 +417,7 @@ function Sales() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Total Revenue</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{t('totalRevenue')}</p>
                   <p className="text-xl font-bold text-gray-800 dark:text-white mt-1">
                     {formatCurrency(analyticsData.salesTargets.achieved)}
                   </p>
@@ -414,11 +431,11 @@ function Sales() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Total Profit</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{t('totalProfit')}</p>
                   <p className="text-xl font-bold text-gray-800 dark:text-white mt-1">
                     {formatCurrency(analyticsData.salesTargets.achieved * 0.3)}
                   </p>
-                  <p className="text-xs text-green-600 mt-0.5">30% margin</p>
+                  <p className="text-xs text-green-600 mt-0.5">{t('profitMargin')}</p>
                 </div>
                 <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/20">
                   <TrendingUp className="w-6 h-6 text-green-600" />
@@ -429,7 +446,7 @@ function Sales() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Items Sold</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{t('itemsSold')}</p>
                   <p className="text-xl font-bold text-gray-800 dark:text-white mt-1">
                     {analyticsData.topSellingItems.reduce((sum, item) => sum + item.quantity, 0)}
                   </p>
@@ -443,12 +460,12 @@ function Sales() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Returns Processed</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{t('returnsProcessed')}</p>
                   <p className="text-xl font-bold text-gray-800 dark:text-white mt-1">
                     {returns.length}
                   </p>
                   <p className="text-xs text-orange-600 mt-1">
-                    {formatCurrency(returns.reduce((sum, r) => sum + r.refund_amount, 0))} refunded
+                    {formatCurrency(returns.reduce((sum, r) => sum + r.refund_amount, 0))} {t('refunded')}
                   </p>
                 </div>
                 <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/20">
@@ -462,7 +479,7 @@ function Sales() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <Clock className="w-6 h-6" style={{color: '#2C5F6F'}} />
-              Hourly Sales Breakdown
+              {t('hourlySalesBreakdown')}
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={analyticsData.hourlyBreakdown}>
@@ -482,7 +499,7 @@ function Sales() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
                 <PieChart className="w-6 h-6" style={{color: '#2C5F6F'}} />
-                Sales by Category
+                {t('salesByCategory')}
               </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <RechartsPie>
@@ -509,7 +526,7 @@ function Sales() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
                 <DollarSign className="w-6 h-6" style={{color: '#2C5F6F'}} />
-                Sales by Payment Method
+                {t('salesByPaymentMethod')}
               </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={analyticsData.paymentMethodBreakdown}>
@@ -529,16 +546,16 @@ function Sales() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <Award className="w-6 h-6" style={{color: '#2C5F6F'}} />
-              Best Selling Items
+              {t('bestSellingItems')}
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b dark:border-gray-700">
                     <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">#</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Item Name</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Quantity Sold</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Revenue</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('itemName')}</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('quantitySold')}</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('revenue')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -565,7 +582,7 @@ function Sales() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-green-600" />
-              Profit Margin by Item
+              {t('profitMarginByItem')}
             </h2>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={analyticsData.profitByItem}>
@@ -592,7 +609,7 @@ function Sales() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="Search by bill number or customer name..."
+                  placeholder={t('searchByBillOrCustomer')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
@@ -605,17 +622,17 @@ function Sales() {
           {/* Returns Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border-l-4 border-orange-500">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Returns</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('totalReturns')}</p>
               <p className="text-3xl font-bold text-gray-800 dark:text-white mt-2">{returns.length}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border-l-4 border-red-500">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Refunded</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('totalRefunded')}</p>
               <p className="text-3xl font-bold text-gray-800 dark:text-white mt-2">
                 {formatCurrency(returns.reduce((sum, r) => sum + r.refund_amount, 0))}
               </p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border-l-4 border-green-500">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Return Rate</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('returnRate')}</p>
               <p className="text-3xl font-bold text-gray-800 dark:text-white mt-2">
                 {bills.length > 0 ? ((returns.length / bills.length) * 100).toFixed(1) : 0}%
               </p>
@@ -624,31 +641,31 @@ function Sales() {
 
           {/* Available Bills for Return */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Select Bill for Return</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">{t('selectBillForReturn')}</h2>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b dark:border-gray-700">
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Bill #</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Customer</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Date</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Amount</th>
-                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Items</th>
-                    <th className="text-center py-3 px-4 text-gray-700 dark:text-gray-300">Action</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('billNumber')}</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('customer')}</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('date')}</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('amount')}</th>
+                    <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">{t('items')}</th>
+                    <th className="text-center py-3 px-4 text-gray-700 dark:text-gray-300">{t('action')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBills.slice(0, 10).map(bill => (
                     <tr key={bill.bill_id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="py-3 px-4 font-mono text-sm" style={{color: '#2C5F6F'}}>{bill.bill_number}</td>
-                      <td className="py-3 px-4 text-gray-800 dark:text-white">{bill.customer_name || 'Walk-in'}</td>
+                      <td className="py-3 px-4 font-mono text-sm" style={{color: '#2C5F6F'}}>#{bill.bill_id}</td>
+                      <td className="py-3 px-4 text-gray-800 dark:text-white">{getCustomerName(bill) || t('walkIn')}</td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">
-                        {new Date(bill.created_at).toLocaleDateString()}
+                        {new Date(bill.bill_date).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4 text-gray-800 dark:text-white font-semibold">
-                        {formatCurrency(bill.total_amount)}
+                        {formatCurrency(bill.effective_total)}
                       </td>
-                      <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{bill.items?.length || 0} items</td>
+                      <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{bill.items?.length || 0} {t('items')}</td>
                       <td className="py-3 px-4 text-center">
                         <button
                           onClick={() => handleInitiateReturn(bill)}
@@ -657,7 +674,7 @@ function Sales() {
                           onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
                           onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                         >
-                          Process Return
+                          {t('processReturnBtn')}
                         </button>
                       </td>
                     </tr>
@@ -669,9 +686,9 @@ function Sales() {
 
           {/* Return History */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Return History</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">{t('returnHistory')}</h2>
             {returns.length === 0 ? (
-              <p className="text-center py-8 text-gray-500">No returns processed yet</p>
+              <p className="text-center py-8 text-gray-500">{t('noReturnsYet')}</p>
             ) : (
               <div className="space-y-4">
                 {returns.map(returnRecord => (
@@ -679,10 +696,10 @@ function Sales() {
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <p className="font-semibold text-gray-800 dark:text-white">
-                          Bill: {returnRecord.bill_number}
+                          {t('billLabel')}: {returnRecord.bill_number}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Customer: {returnRecord.customer_name || 'Walk-in'}
+                          {t('customer')}: {returnRecord.customer_name || t('walkIn')}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           {formatDate(returnRecord.created_at)}
@@ -694,7 +711,7 @@ function Sales() {
                             ? 'bg-red-100 text-red-800' 
                             : 'bg-orange-100 text-orange-800'
                         }`}>
-                          {returnRecord.return_type} Return
+                          {returnRecord.return_type === 'full' ? t('fullReturn') : t('partialReturn')}
                         </span>
                         <p className="text-lg font-bold mt-2" style={{color: '#2C5F6F'}}>
                           {formatCurrency(returnRecord.refund_amount)}
@@ -703,10 +720,10 @@ function Sales() {
                     </div>
                     <div className="border-t dark:border-gray-700 pt-3">
                       <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                        <strong>Reason:</strong> {returnRecord.reason}
+                        <strong>{t('reasonLabel')}:</strong> {returnRecord.reason}
                       </p>
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <strong>Items:</strong> {returnRecord.items.map(item => 
+                        <strong>{t('items')}:</strong> {returnRecord.items.map(item => 
                           `${item.item_name} (${item.returned_qty})`
                         ).join(', ')}
                       </p>
@@ -726,7 +743,7 @@ function Sales() {
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Process Return</h3>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t('processReturnTitle')}</h3>
                 <button
                   onClick={() => setShowReturnModal(false)}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -739,21 +756,21 @@ function Sales() {
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Bill Number</p>
-                    <p className="font-semibold text-gray-800 dark:text-white">{selectedBill.bill_number}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('billNumber')}</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">#{selectedBill.bill_id}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
-                    <p className="font-semibold text-gray-800 dark:text-white">{selectedBill.customer_name || 'Walk-in'}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('customer')}</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{getCustomerName(selectedBill) || t('walkIn')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                    <p className="font-semibold text-gray-800 dark:text-white">{formatCurrency(selectedBill.total_amount)}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('totalAmount')}</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{formatCurrency(selectedBill.effective_total)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('date')}</p>
                     <p className="font-semibold text-gray-800 dark:text-white">
-                      {new Date(selectedBill.created_at).toLocaleDateString()}
+                      {new Date(selectedBill.bill_date).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -762,7 +779,7 @@ function Sales() {
               {/* Return Type Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Return Type
+                  {t('returnType')}
                 </label>
                 <div className="flex gap-4">
                   <button
@@ -773,8 +790,8 @@ function Sales() {
                         : 'border-gray-300 dark:border-gray-600'
                     }`}
                   >
-                    <p className="font-semibold">Full Return</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Return all items</p>
+                    <p className="font-semibold">{t('fullReturn')}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{t('returnAllItems')}</p>
                   </button>
                   <button
                     onClick={() => setReturnType('partial')}
@@ -784,8 +801,8 @@ function Sales() {
                         : 'border-gray-300 dark:border-gray-600'
                     }`}
                   >
-                    <p className="font-semibold">Partial Return</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Select specific items</p>
+                    <p className="font-semibold">{t('partialReturn')}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{t('selectSpecificItems')}</p>
                   </button>
                 </div>
               </div>
@@ -793,12 +810,12 @@ function Sales() {
               {/* Items List */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Items to Return
+                  {t('itemsToReturn')}
                 </label>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {returnItems.map(item => (
                     <div
-                      key={item.item_id}
+                      key={item.item_name}
                       className={`p-3 border rounded-lg ${
                         returnType === 'full' || item.selected
                           ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
@@ -811,26 +828,26 @@ function Sales() {
                             <input
                               type="checkbox"
                               checked={item.selected}
-                              onChange={() => toggleReturnItem(item.item_id)}
+                              onChange={() => toggleReturnItem(item.item_name)}
                               className="w-5 h-5"
                             />
                           )}
                           <div className="flex-1">
                             <p className="font-medium text-gray-800 dark:text-white">{item.item_name}</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Qty: {item.quantity} | Price: {formatCurrency(item.unit_price)}
+                              {t('qtyLabel')}: {item.quantity} | {t('priceLabel')}: {formatCurrency(item.unit_price)}
                             </p>
                           </div>
                         </div>
                         {returnType === 'partial' && item.selected && (
                           <div className="flex items-center gap-2">
-                            <label className="text-sm">Return Qty:</label>
+                            <label className="text-sm">{t('returnQty')}:</label>
                             <input
                               type="number"
                               min="0"
                               max={item.quantity}
                               value={item.returnQty}
-                              onChange={(e) => updateReturnQty(item.item_id, parseInt(e.target.value) || 0)}
+                              onChange={(e) => updateReturnQty(item.item_name, parseInt(e.target.value) || 0)}
                               className="w-20 px-2 py-1 border rounded dark:bg-gray-700"
                             />
                           </div>
@@ -844,31 +861,31 @@ function Sales() {
               {/* Return Reason */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Return Reason *
+                  {t('returnReason')}
                 </label>
                 <select
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Select a reason...</option>
-                  <option value="Defective Product">Defective Product</option>
-                  <option value="Wrong Item Delivered">Wrong Item Delivered</option>
-                  <option value="Customer Changed Mind">Customer Changed Mind</option>
-                  <option value="Expired Product">Expired Product</option>
-                  <option value="Quality Issues">Quality Issues</option>
-                  <option value="Other">Other</option>
+                  <option value="">{t('selectAReason')}</option>
+                  <option value="Defective Product">{t('defectiveProduct')}</option>
+                  <option value="Wrong Item Delivered">{t('wrongItemDelivered')}</option>
+                  <option value="Customer Changed Mind">{t('customerChangedMind')}</option>
+                  <option value="Expired Product">{t('expiredProduct')}</option>
+                  <option value="Quality Issues">{t('qualityIssues')}</option>
+                  <option value="Other">{t('other')}</option>
                 </select>
               </div>
 
               {/* Refund Calculation */}
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between">
-                  <p className="text-gray-700 dark:text-gray-300">Refund Amount:</p>
+                  <p className="text-gray-700 dark:text-gray-300">{t('refundAmount')}:</p>
                   <p className="text-2xl font-bold" style={{color: '#2C5F6F'}}>
                     {formatCurrency(
                       returnType === 'full'
-                        ? selectedBill.total_amount
+                        ? selectedBill.effective_total
                         : returnItems
                             .filter(item => item.selected)
                             .reduce((sum, item) => sum + (item.returnQty * item.unit_price), 0)
@@ -883,7 +900,7 @@ function Sales() {
                   onClick={() => setShowReturnModal(false)}
                   className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={processReturn}
@@ -892,13 +909,25 @@ function Sales() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                 >
-                  Process Return & Refund
+                  {t('processReturnAndRefund')}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={alertDialog.open}
+        type={alertDialog.type}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        confirmText={alertDialog.confirmText}
+        cancelText={alertDialog.cancelText}
+        onConfirm={alertDialog.onConfirm}
+        onCancel={alertDialog.onCancel}
+        showCancel={alertDialog.showCancel}
+      />
     </div>
   )
 }

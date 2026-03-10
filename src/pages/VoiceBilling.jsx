@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Mic, MicOff, Plus, Trash2, ShoppingCart, Search, CheckCircle, X, BookOpen, FileText, User } from 'lucide-react'
 import Receipt from '../components/Receipt'
-import { itemsAPI, customersAPI, salesAPI, udharsAPI, billsAPI } from '../services/api'
+import AlertDialog from '../components/AlertDialog'
+import { itemsAPI, customersAPI, udharsAPI, billItemsAPI, udharItemsAPI } from '../services/api'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function VoiceBilling() {
@@ -29,6 +30,11 @@ function VoiceBilling() {
   const [udharSearchResults, setUdharSearchResults] = useState([])
   const [udharLoading, setUdharLoading] = useState(false)
   const [allUdhars, setAllUdhars] = useState([])
+  const [alertDialog, setAlertDialog] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null, onCancel: null, showCancel: false, confirmText: '', cancelText: '' })
+
+  const showAlert = (type, title, message) => {
+    setAlertDialog({ open: true, type, title, message, onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })), onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })), showCancel: false, confirmText: '', cancelText: '' })
+  }
 
   // Load items and customers for manual billing
   useEffect(() => {
@@ -49,7 +55,7 @@ function VoiceBilling() {
       setItems(itemsRes.data)
     } catch (error) {
       console.error('Error fetching items:', error)
-      alert('Failed to load items: ' + (error.message || 'Please try again'))
+      showAlert('error', t('alertError'), t('failedToLoadItems') + ': ' + (error.message || t('pleaseTryAgain')))
     } finally {
       setLoading(false)
     }
@@ -123,8 +129,8 @@ function VoiceBilling() {
     const qty = Number(quantity)
     
     // Check if item has enough stock
-    if (qty > item.stock) {
-      alert(`Insufficient stock! Available: ${item.stock} ${item.unit}`)
+    if (qty > item.stock_quantity) {
+      showAlert('warning', t('insufficientStock'), t('insufficientStockMsg').replace('{stock}', item.stock_quantity).replace('{unit}', item.item_unit))
       return
     }
 
@@ -133,10 +139,10 @@ function VoiceBilling() {
       item_id: item.item_id,
       name: item.item_name,
       quantity: qty,
-      unit: item.unit,
-      price: item.sale_price,
-      total: qty * item.sale_price,
-      availableStock: item.stock
+      unit: item.item_unit,
+      price: item.unit_price,
+      total: qty * item.unit_price,
+      availableStock: item.stock_quantity
     }
     
     setBillItems([...billItems, billItem])
@@ -153,7 +159,7 @@ function VoiceBilling() {
   // Step 1: Click Generate Bill -> Show option modal (Udhar or Receipt)
   const generateBill = async () => {
     if (billItems.length === 0) {
-      alert('No items in bill!')
+      showAlert('warning', t('alertWarning'), t('noItemsInBill'))
       return
     }
     
@@ -182,10 +188,10 @@ function VoiceBilling() {
         return {
           customer_id: customer.customer_id,
           customer_name: customer.customer_name,
-          total_amount: udhar?.total_amount || 0,
+          total_amount: udhar?.subtotal || 0,
           direct_addition: udhar?.direct_addition || 0,
           direct_deduction: udhar?.direct_deduction || 0,
-          effective_total: udhar?.effective_total || 0
+          effective_total: udhar?.total || 0
         }
       })
       
@@ -220,10 +226,10 @@ function VoiceBilling() {
         return {
           customer_id: customer.customer_id,
           customer_name: customer.customer_name,
-          total_amount: udhar?.total_amount || 0,
+          total_amount: udhar?.subtotal || 0,
           direct_addition: udhar?.direct_addition || 0,
           direct_deduction: udhar?.direct_deduction || 0,
-          effective_total: udhar?.effective_total || 0
+          effective_total: udhar?.total || 0
         }
       })
       
@@ -256,51 +262,26 @@ function VoiceBilling() {
       for (const billItem of billItems) {
         const currentItem = currentItems.find(i => i.item_id === billItem.item_id)
         if (!currentItem) {
-          alert(`Item ${billItem.name} not found in inventory!`)
+          showAlert('error', t('alertError'), t('itemNotFoundInInventory').replace('{name}', billItem.name))
           setUdharLoading(false)
           return
         }
         if (billItem.quantity > currentItem.stock_quantity) {
-          alert(`Insufficient stock for ${billItem.name}! Available: ${currentItem.stock_quantity} ${currentItem.item_unit}`)
+          showAlert('warning', t('insufficientStock'), t('insufficientStockForItem').replace('{name}', billItem.name).replace('{stock}', currentItem.stock_quantity).replace('{unit}', currentItem.item_unit))
           setUdharLoading(false)
           return
         }
       }
 
-      // Update inventory and create sales records
+      // Use backend udhar-items API which auto-deducts stock, creates sales, and manages udhar
       for (const billItem of billItems) {
-        const currentItem = currentItems.find(i => i.item_id === billItem.item_id)
-        const newStock = currentItem.stock_quantity - billItem.quantity
-        
-        await itemsAPI.update(billItem.item_id, {
-          stock_quantity: newStock
-        })
-
-        await salesAPI.create({
-          item_id: billItem.item_id,
-          quantity_sold: billItem.quantity,
-          customer_id: customer.customer_id
+        await udharItemsAPI.create({
+          customer_name: customer.customer_name,
+          item_name: billItem.name,
+          quantity: billItem.quantity,
+          unit: billItem.unit,
         })
       }
-
-      // Add bill total to customer's udhar using direct addition
-      await udharsAPI.updateDirectAddition(customer.customer_id, billTotal)
-      
-      // Save bill to history
-      await billsAPI.create({
-        customer_name: customer.customer_name,
-        customer_id: customer.customer_id,
-        payment_type: 'udhar',
-        total_amount: billTotal,
-        items: billItems.map(item => ({
-          item_id: item.item_id,
-          item_name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          unit_price: item.price,
-          total_price: item.total
-        }))
-      })
       
       setUdharLoading(false)
       setShowUdharModal(false)
@@ -310,7 +291,7 @@ function VoiceBilling() {
       })
     } catch (error) {
       console.error('Error adding to udhar:', error)
-      alert('Failed to add to udhar: ' + (error.response?.data?.detail || error.message))
+      showAlert('error', t('alertError'), t('failedToAddToUdhar') + ': ' + (error.response?.data?.detail || error.message))
       setUdharLoading(false)
     }
   }
@@ -330,50 +311,25 @@ function VoiceBilling() {
         for (const billItem of billItems) {
           const currentItem = currentItems.find(i => i.item_id === billItem.item_id)
           if (!currentItem) {
-            alert(`Item ${billItem.name} not found in inventory!`)
+            showAlert('error', t('alertError'), t('itemNotFoundInInventory').replace('{name}', billItem.name))
             setLoading(false)
             return
           }
           if (billItem.quantity > currentItem.stock_quantity) {
-            alert(`Insufficient stock for ${billItem.name}! Available: ${currentItem.stock_quantity} ${currentItem.item_unit}`)
+            showAlert('warning', t('insufficientStock'), t('insufficientStockForItem').replace('{name}', billItem.name).replace('{stock}', currentItem.stock_quantity).replace('{unit}', currentItem.item_unit))
             setLoading(false)
             return
           }
         }
 
-        // Update inventory and create sales records for each item
-        for (const billItem of billItems) {
-          const currentItem = currentItems.find(i => i.item_id === billItem.item_id)
-          const newStock = currentItem.stock_quantity - billItem.quantity
-          
-          // Update inventory
-          await itemsAPI.update(billItem.item_id, {
-            stock_quantity: newStock
-          })
-
-          // Create sales record
-          await salesAPI.create({
-            item_id: billItem.item_id,
-            quantity_sold: billItem.quantity,
-            customer_id: null  // No customer for cash payment
-          })
-        }
-
-        // Save bill to history
-        await billsAPI.create({
-          customer_name: null,
-          customer_id: null,
-          payment_type: 'cash',
-          total_amount: calculateTotal(),
-          items: billItems.map(item => ({
-            item_id: item.item_id,
-            item_name: item.name,
-            quantity: item.quantity,
-            unit: item.unit,
-            unit_price: item.price,
-            total_price: item.total
+        // Create a single bill with all items in one request
+        await billItemsAPI.createBatch(
+          billItems.map(billItem => ({
+            item_name: billItem.name,
+            quantity: billItem.quantity,
+            requested_unit: billItem.unit,
           }))
-        })
+        )
 
         setSuccessModal({ 
           show: true, 
@@ -383,7 +339,7 @@ function VoiceBilling() {
         return
       } catch (error) {
         console.error('Error updating inventory:', error)
-        alert('Failed to update inventory: ' + (error.response?.data?.detail || error.message))
+        showAlert('error', t('alertError'), t('failedToUpdateInventory') + ': ' + (error.response?.data?.detail || error.message))
         setLoading(false)
         return
       }
@@ -409,8 +365,7 @@ function VoiceBilling() {
 
   // Filtered items for manual billing
   const filteredItems = items.filter(item =>
-    item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.keywords?.toLowerCase().includes(searchTerm.toLowerCase())
+    item.item_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Filtered customers
@@ -434,7 +389,7 @@ function VoiceBilling() {
     <div className="space-y-4 mt-12">
       {/* Page Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-100 dark:border-gray-700">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Billing System</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t('billingSystem')}</h1>
       </div>
       
       {/* Mode Toggle */}
@@ -495,7 +450,7 @@ function VoiceBilling() {
           {/* Transcribed Text */}
           {transcript && (
             <div className="w-full max-w-2xl rounded-lg p-4 mb-4" style={{backgroundColor: 'rgba(44, 95, 111, 0.1)'}}>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Transcribed:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('transcribed')}:</p>
               <p className="text-lg font-medium text-gray-800 dark:text-white">{transcript}</p>
             </div>
           )}
@@ -503,24 +458,24 @@ function VoiceBilling() {
           {/* Parsed Output */}
           {parsedItem && (
             <div className="w-full max-w-2xl bg-green-50 dark:bg-green-900/20 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Parsed Item:</h3>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t('parsedItemLabel')}:</h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Item Name:</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('itemNameLabel')}:</p>
                   <p className="text-lg font-semibold text-gray-800 dark:text-white">{parsedItem.name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Quantity:</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('quantityLabel')}:</p>
                   <p className="text-lg font-semibold text-gray-800 dark:text-white">
                     {parsedItem.quantity} {parsedItem.unit}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Unit Price:</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('unitPriceLabel')}:</p>
                   <p className="text-lg font-semibold text-gray-800 dark:text-white">₨ {parsedItem.price}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total:</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t('totalLabel')}:</p>
                   <p className="text-lg font-semibold text-green-600">₨ {parsedItem.total}</p>
                 </div>
               </div>
@@ -529,7 +484,7 @@ function VoiceBilling() {
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                Add to Bill
+                {t('addToBill')}
               </button>
             </div>
           )}
@@ -559,15 +514,15 @@ function VoiceBilling() {
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
-                <p className="mt-4 text-gray-600 dark:text-gray-400">Loading items...</p>
+                <p className="mt-4 text-gray-600 dark:text-gray-400">{t('loadingItems')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredItems.length === 0 ? (
                   <div className="col-span-full text-center py-12">
                     <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-400 opacity-50" />
-                    <p className="text-gray-500 dark:text-gray-400">No items found</p>
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Try adding items in Inventory page first</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('noItemsFound')}</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">{t('tryAddingItemsFirst')}</p>
                   </div>
                 ) : (
                   filteredItems.map(item => (
@@ -583,7 +538,7 @@ function VoiceBilling() {
                       {item.stock_quantity <= 0 && (
                         <div className="mb-2">
                           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                            OUT OF STOCK
+                            {t('outOfStock').toUpperCase()}
                           </span>
                         </div>
                       )}
@@ -604,7 +559,7 @@ function VoiceBilling() {
                       {/* Stock Info */}
                       <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-600">
                         <p className={`text-sm ${item.stock_quantity <= 0 ? 'text-red-600 font-bold' : 'text-gray-600 dark:text-gray-400'}`}>
-                          Available: <span className="font-semibold">{item.stock_quantity} {item.item_unit}</span>
+                          {t('available')}: <span className="font-semibold">{item.stock_quantity} {item.item_unit}</span>
                         </p>
                       </div>
 
@@ -632,12 +587,12 @@ function VoiceBilling() {
                           const qty = parseFloat(qtyInput.value)
                           
                           if (isNaN(qty) || qty <= 0) {
-                            alert('Please enter a valid quantity')
+                            showAlert('warning', t('alertWarning'), t('pleaseEnterValidQty'))
                             return
                           }
                           
                           if (qty > item.stock_quantity) {
-                            alert(`Only ${item.stock_quantity} ${item.item_unit} available!`)
+                            showAlert('warning', t('insufficientStock'), t('onlyXAvailable').replace('{stock}', item.stock_quantity).replace('{unit}', item.item_unit))
                             return
                           }
 
@@ -783,7 +738,7 @@ function VoiceBilling() {
                   <div className="bg-white/20 p-2 rounded-full">
                     <CheckCircle className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-white">Success!</h3>
+                  <h3 className="text-xl font-bold text-white">{t('success')}!</h3>
                 </div>
                 <button
                   onClick={handleSuccessOk}
@@ -807,7 +762,7 @@ function VoiceBilling() {
                   onClick={handleSuccessOk}
                   className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
-                  View Receipt
+                  {t('viewReceipt')}
                 </button>
               </div>
             </div>
@@ -917,7 +872,7 @@ function VoiceBilling() {
               {udharLoading && (
                 <div className="text-center py-4">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                  <p className="mt-2 text-gray-600 dark:text-gray-400">Processing...</p>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">{t('processing')}</p>
                 </div>
               )}
 
@@ -968,13 +923,25 @@ function VoiceBilling() {
               {!udharLoading && !udharCustomerName && (
                 <div className="text-center py-8">
                   <Search className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-600 dark:text-gray-400">Type customer name to search</p>
+                  <p className="text-gray-600 dark:text-gray-400">{t('searchCustomer')}</p>
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={alertDialog.open}
+        type={alertDialog.type}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        confirmText={alertDialog.confirmText}
+        cancelText={alertDialog.cancelText}
+        onConfirm={alertDialog.onConfirm}
+        onCancel={alertDialog.onCancel}
+        showCancel={alertDialog.showCancel}
+      />
     </div>
   )
 }

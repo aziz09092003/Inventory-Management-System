@@ -28,11 +28,11 @@ function Forecasting() {
     try {
       const itemsData = await itemsAPI.getAll()
       const salesData = await salesAPI.getAll()
-      setItems(itemsData)
-      setSales(salesData)
+      setItems(itemsData.data || [])
+      setSales(salesData.data || [])
       
       // Process forecasting data
-      analyzeData(itemsData, salesData)
+      analyzeData(itemsData.data || [], salesData.data || [])
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -47,14 +47,14 @@ function Forecasting() {
 
     // Calculate sales velocity for each item
     const itemSalesStats = itemsData.map(item => {
+      // Sales are flat records: { sale_id, item_id, quantity_sold, sale_date, ... }
       const itemSales = salesData.filter(sale => 
-        sale.items?.some(saleItem => saleItem.item_id === item.item_id) &&
-        new Date(sale.date) >= cutoffDate
+        sale.item_id === item.item_id &&
+        new Date(sale.sale_date) >= cutoffDate
       )
 
       const totalQuantitySold = itemSales.reduce((sum, sale) => {
-        const saleItem = sale.items.find(si => si.item_id === item.item_id)
-        return sum + (saleItem?.quantity || 0)
+        return sum + (sale.quantity_sold || 0)
       }, 0)
 
       const avgDailySales = totalQuantitySold / daysToAnalyze
@@ -125,10 +125,10 @@ function Forecasting() {
 
   const getDemandBadge = (trend) => {
     const badges = {
-      high: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', text: 'High Demand' },
-      medium: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', text: 'Medium' },
-      low: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', text: 'Low Demand' },
-      none: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300', text: 'No Sales' }
+      high: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', text: t('highDemand') },
+      medium: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', text: t('mediumDemand') },
+      low: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', text: t('lowDemandLabel') },
+      none: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300', text: t('noSalesLabel') }
     }
     return badges[trend] || badges.none
   }
@@ -151,24 +151,24 @@ function Forecasting() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <BarChart3 className="w-6 h-6" style={{color: '#2C5F6F'}} />
-              Demand Forecasting & Analysis
+              {t('demandForecasting')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-              Predictive insights to optimize inventory levels and prevent stockouts
+              {t('forecastingDescription')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Analysis Period:</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('analysisPeriod')}:</label>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
               style={{outlineColor: '#2C5F6F'}}
             >
-              <option value="7">Last 7 Days</option>
-              <option value="30">Last 30 Days</option>
-              <option value="60">Last 60 Days</option>
-              <option value="90">Last 90 Days</option>
+              <option value="7">{t('last7Days')}</option>
+              <option value="30">{t('last30Days')}</option>
+              <option value="60">{t('last60Days')}</option>
+              <option value="90">{t('last90Days')}</option>
             </select>
           </div>
         </div>
@@ -179,11 +179,11 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border-l-4" style={{borderColor: '#2C5F6F'}}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Critical Items</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('criticalItems')}</p>
               <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">{demandAnalysis.critical.length}</p>
               <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                Needs immediate attention
+                {t('needsImmediateAttention')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/20">
@@ -195,11 +195,11 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border-l-4 border-orange-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Stockout Risk</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('stockoutRisk')}</p>
               <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">{stockoutRisk.length}</p>
               <p className="text-xs text-orange-600 mt-0.5 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Within 14 days
+                {t('within14Days')}
               </p>
             </div>
             <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/20">
@@ -211,11 +211,11 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">High Demand Items</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{t('highDemandItems')}</p>
               <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">{demandAnalysis.highDemand.length}</p>
               <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
-                Strong sales velocity
+                {t('strongSalesVelocity')}
               </p>
             </div>
             <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
@@ -227,11 +227,11 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Reorder Required</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('reorderRequired')}</p>
               <p className="text-3xl font-bold text-gray-800 dark:text-white mt-2">{reorderSuggestions.length}</p>
               <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                 <Package className="w-3 h-3" />
-                Below reorder point
+                {t('belowReorderPoint')}
               </p>
             </div>
             <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/20">
@@ -245,7 +245,7 @@ function Forecasting() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
           <BarChart3 className="w-6 h-6" style={{color: '#2C5F6F'}} />
-          Stock Level Forecast (Next 30 Days)
+          {t('stockLevelForecast')}
         </h2>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={forecastData}>
@@ -267,7 +267,7 @@ function Forecasting() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
               <AlertCircle className="w-6 h-6 text-red-600" />
-              Critical Stock Alerts
+              {t('criticalStockAlerts')}
             </h2>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {demandAnalysis.critical.map((item, index) => (
@@ -277,14 +277,14 @@ function Forecasting() {
                       <h3 className="font-semibold text-gray-800 dark:text-white">{item.item_name}</h3>
                       <div className="mt-2 space-y-1 text-sm">
                         <p className="text-gray-600 dark:text-gray-400">
-                          Current Stock: <span className="font-semibold text-red-600">{item.stock_quantity}</span>
+                          {t('currentStockLabel')}: <span className="font-semibold text-red-600">{item.stock_quantity}</span>
                         </p>
                         <p className="text-gray-600 dark:text-gray-400">
-                          Avg Daily Sales: <span className="font-semibold">{item.avgDailySales.toFixed(2)}</span>
+                          {t('avgDailySales')}: <span className="font-semibold">{item.avgDailySales.toFixed(2)}</span>
                         </p>
                         <p className="text-gray-600 dark:text-gray-400">
-                          Days Until Stockout: <span className="font-semibold text-red-600">
-                            {item.daysUntilStockout < Infinity ? Math.floor(item.daysUntilStockout) + ' days' : 'N/A'}
+                          {t('daysUntilStockout')}: <span className="font-semibold text-red-600">
+                            {item.daysUntilStockout < Infinity ? Math.floor(item.daysUntilStockout) + ` ${t('daysLabel')}` : 'N/A'}
                           </span>
                         </p>
                       </div>
@@ -301,7 +301,7 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
             <Package className="w-6 h-6" style={{color: '#2C5F6F'}} />
-            Reorder Recommendations
+            {t('reorderRecommendations')}
           </h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {reorderSuggestions.length > 0 ? (
@@ -312,18 +312,18 @@ function Forecasting() {
                       <h3 className="font-semibold text-gray-800 dark:text-white">{item.item_name}</h3>
                       <div className="mt-2 space-y-1 text-sm">
                         <p className="text-gray-600 dark:text-gray-400">
-                          Current: <span className="font-semibold">{item.stock_quantity}</span> | 
-                          Reorder Point: <span className="font-semibold">{Math.round(item.reorderPoint)}</span>
+                          {t('currentLabel')}: <span className="font-semibold">{item.stock_quantity}</span> | 
+                          {t('reorderPointLabel')}: <span className="font-semibold">{Math.round(item.reorderPoint)}</span>
                         </p>
                         <p className="text-gray-600 dark:text-gray-400">
-                          Suggested Order: <span className="font-semibold text-orange-600">
-                            {Math.round(item.optimalStock - item.stock_quantity)} units
+                          {t('suggestedOrder')}: <span className="font-semibold text-orange-600">
+                            {Math.round(item.optimalStock - item.stock_quantity)} {t('unitsLabel')}
                           </span>
                         </p>
                       </div>
                     </div>
                     <div className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
-                      Reorder Now
+                      {t('reorderNow')}
                     </div>
                   </div>
                 </div>
@@ -331,7 +331,7 @@ function Forecasting() {
             ) : (
               <div className="text-center py-8">
                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                <p className="text-gray-600 dark:text-gray-400">All items are well-stocked!</p>
+                <p className="text-gray-600 dark:text-gray-400">{t('allItemsWellStocked')}</p>
               </div>
             )}
           </div>
@@ -343,7 +343,7 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-green-600" />
-            High Demand Items
+            {t('highDemandItems')}
           </h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {demandAnalysis.highDemand.length > 0 ? (
@@ -358,9 +358,9 @@ function Forecasting() {
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                        <span>Sold: <strong>{item.totalSold}</strong></span>
-                        <span>Daily Avg: <strong>{item.avgDailySales.toFixed(2)}</strong></span>
-                        <span>Stock: <strong>{item.stock_quantity}</strong></span>
+                        <span>{t('soldLabel')}: <strong>{item.totalSold}</strong></span>
+                        <span>{t('dailyAvg')}: <strong>{item.avgDailySales.toFixed(2)}</strong></span>
+                        <span>{t('stock')}: <strong>{item.stock_quantity}</strong></span>
                       </div>
                     </div>
                     <ArrowUpRight className="w-5 h-5 text-green-600" />
@@ -368,7 +368,7 @@ function Forecasting() {
                 </div>
               ))
             ) : (
-              <p className="text-center text-gray-500 py-8">No high demand items in this period</p>
+              <p className="text-center text-gray-500 py-8">{t('noHighDemandItems')}</p>
             )}
           </div>
         </div>
@@ -377,7 +377,7 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
             <TrendingDown className="w-6 h-6 text-blue-600" />
-            Low Demand / Slow Moving Items
+            {t('lowDemandItems')}
           </h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {demandAnalysis.lowDemand.length > 0 ? (
@@ -392,11 +392,11 @@ function Forecasting() {
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                        <span>Sold: <strong>{item.totalSold}</strong></span>
-                        <span>Stock: <strong>{item.stock_quantity}</strong></span>
+                        <span>{t('soldLabel')}: <strong>{item.totalSold}</strong></span>
+                        <span>{t('stock')}: <strong>{item.stock_quantity}</strong></span>
                       </div>
                       {item.totalSold === 0 && (
-                        <p className="text-xs text-orange-600 mt-1">Consider promotion or clearance</p>
+                        <p className="text-xs text-orange-600 mt-1">{t('considerPromotion')}</p>
                       )}
                     </div>
                     <ArrowDownRight className="w-5 h-5 text-blue-600" />
@@ -404,7 +404,7 @@ function Forecasting() {
                 </div>
               ))
             ) : (
-              <p className="text-center text-gray-500 py-8">All items have good sales velocity</p>
+              <p className="text-center text-gray-500 py-8">{t('allItemsGoodVelocity')}</p>
             )}
           </div>
         </div>
@@ -415,7 +415,7 @@ function Forecasting() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
             <Clock className="w-6 h-6 text-orange-600" />
-            Stockout Risk Timeline (Next 14 Days)
+            {t('stockoutRiskTimeline')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {stockoutRisk.map((item, index) => (
@@ -428,10 +428,10 @@ function Forecasting() {
                   <p>
                     <strong className="text-red-600">
                       ~{Math.floor(item.daysUntilStockout)} days
-                    </strong> until stockout
+                    </strong> {t('untilStockout')}
                   </p>
-                  <p>Current: <strong>{item.stock_quantity}</strong> units</p>
-                  <p>Daily Rate: <strong>{item.avgDailySales.toFixed(2)}</strong> units/day</p>
+                  <p>{t('currentLabel')}: <strong>{item.stock_quantity}</strong> {t('unitsLabel')}</p>
+                  <p>{t('dailyRate')}: <strong>{item.avgDailySales.toFixed(2)}</strong> {t('unitsPerDay')}</p>
                 </div>
               </div>
             ))}

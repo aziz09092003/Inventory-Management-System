@@ -24,12 +24,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    // credentials: { username, password }
+    // credentials: { username, password } — username field contains email
     const res = await authAPI.login(credentials);
-    // Fetch user list to get current user info by username
+    // Fetch user list to get current user info by email
     const usersRes = await authAPI.getUsers();
     const currentUser = usersRes.data.find(
-      (u) => u.username === credentials.username
+      (u) => u.email?.toLowerCase() === credentials.username?.toLowerCase() ||
+             u.username?.toLowerCase() === credentials.username?.toLowerCase()
     );
     if (currentUser) {
       setUser(currentUser);

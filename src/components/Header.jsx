@@ -35,7 +35,7 @@ function Header({ toggleSidebar, toggleTheme, isDarkMode }) {
             <Menu className="w-6 h-6 text-gray-700 dark:text-gray-200" />
           </button>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
-            Welcome {getFirstName()}!
+            {t('welcomeUser')} {getFirstName()}!
           </h1>
         </div>
 
@@ -46,7 +46,7 @@ function Header({ toggleSidebar, toggleTheme, isDarkMode }) {
             <Search className="w-5 h-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
-              placeholder="Search"
+              placeholder={t('search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="ml-2 bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 w-full"
@@ -95,7 +95,7 @@ function Header({ toggleSidebar, toggleTheme, isDarkMode }) {
                   className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-red-600 dark:text-red-400"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span className="font-medium">Logout</span>
+                  <span className="font-medium">{t('logout')}</span>
                 </button>
               </div>
             )}

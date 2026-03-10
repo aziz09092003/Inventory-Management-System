@@ -264,9 +264,9 @@ function Settings({ toggleTheme, isDarkMode }) {
                     <Mic className="w-10 h-10" />
                   </button>
                   <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {isRecording ? 'Recording... (5 seconds)' : voiceData ? 'Voice recorded!' : 'Tap to record'}
+                    {isRecording ? t('recordingDuration') : voiceData ? t('voiceRecorded') : t('tapToRecord')}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Read the paragraph above while recording</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('readParagraphWhileRecording')}</p>
                 </div>
 
                 {voiceData && !isRecording && (
@@ -278,7 +278,7 @@ function Settings({ toggleTheme, isDarkMode }) {
                       onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
                       onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
                     >
-                      Register This Voice
+                      {t('registerThisVoice')}
                     </button>
                     <button
                       onClick={() => {
@@ -287,7 +287,7 @@ function Settings({ toggleTheme, isDarkMode }) {
                       }}
                       className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                     >
-                      Re-record
+                      {t('reRecord')}
                     </button>
                   </div>
                 )}

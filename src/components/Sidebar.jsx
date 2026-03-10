@@ -33,11 +33,11 @@ function Sidebar({ isOpen, toggleSidebar }) {
   const navItems = [
     { name: t('dashboard'), path: '/', icon: LayoutDashboard },
     { name: t('inventory'), path: '/inventory', icon: Package },
-    { name: 'Orders', path: '/bill-history', icon: Layers },
-    { name: 'Purchase', path: '/voice-billing', icon: ShoppingCart },
-    { name: 'Sales', path: '/sales', icon: DollarSign },
+    { name: t('billHistory'), path: '/bill-history', icon: Layers },
+    { name: t('purchase'), path: '/voice-billing', icon: ShoppingCart },
+    { name: t('sales'), path: '/sales', icon: DollarSign },
     { name: t('reports'), path: '/reports', icon: BarChart3 },
-    { name: 'Forecasting', path: '/forecasting', icon: TrendingUp },
+    { name: t('forecasting'), path: '/forecasting', icon: TrendingUp },
     { name: t('udharKhata'), path: '/udhar', icon: Book },
     { name: t('settings'), path: '/settings', icon: Settings },
   ]
@@ -150,7 +150,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
+            <span className="font-medium">{t('logout')}</span>
           </button>
         </div>
       </aside>

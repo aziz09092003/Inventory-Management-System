@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Search, Plus, Edit, Trash2, Filter, AlertCircle } from 'lucide-react'
 import { itemsAPI } from '../services/api'
+import AlertDialog from '../components/AlertDialog'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function Inventory() {
@@ -13,8 +14,17 @@ function Inventory() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [alertDialog, setAlertDialog] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null, onCancel: null, showCancel: false, confirmText: '', cancelText: '' })
 
-  const statusOptions = ['all', 'Critical', 'Low', 'Good']
+  const showAlert = (type, title, message) => {
+    setAlertDialog({ open: true, type, title, message, onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })), onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })), showCancel: false, confirmText: '', cancelText: '' })
+  }
+
+  const showConfirm = (type, title, message, onYes) => {
+    setAlertDialog({ open: true, type, title, message, showCancel: true, confirmText: t('yes'), cancelText: t('no'), onConfirm: () => { setAlertDialog(prev => ({ ...prev, open: false })); onYes(); }, onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })) })
+  }
+
+  const statusOptions = ['all', 'outOfStock', 'critical', 'low', 'good']
 
   // Supported Urdu units
   const urduUnits = ['کلو', 'گرام', 'پاؤ', 'چھٹانک', 'لیٹر', 'ملی لیٹر', 'عدد', 'درجن', 'پیکٹ', 'ڈبہ', 'بوتل', 'بوری']
@@ -50,10 +60,10 @@ function Inventory() {
   }
 
   const getStockStatus = (stock) => {
-    if (stock === 0) return { text: 'Out of Stock', color: 'text-red-600 bg-red-100' }
-    if (stock < 10) return { text: 'Critical', color: 'text-red-600 bg-red-100' }
-    if (stock < 20) return { text: 'Low', color: 'text-yellow-600 bg-yellow-100' }
-    return { text: 'Good', color: 'text-green-600 bg-green-100' }
+    if (stock === 0) return { text: 'outOfStock', color: 'text-red-600 bg-red-100' }
+    if (stock < 10) return { text: 'critical', color: 'text-red-600 bg-red-100' }
+    if (stock < 20) return { text: 'low', color: 'text-yellow-600 bg-yellow-100' }
+    return { text: 'good', color: 'text-green-600 bg-green-100' }
   }
 
   const filteredItems = items.filter(item => {
@@ -64,14 +74,14 @@ function Inventory() {
   })
 
   const handleDelete = async (id) => {
-    if (window.confirm(t('confirmDelete'))) {
+    showConfirm('warning', t('alertWarning'), t('confirmDeleteItem'), async () => {
       try {
         await itemsAPI.delete(id)
         setItems(items.filter(item => item.item_id !== id))
       } catch (err) {
-        alert(t('failedToDelete') + ': ' + (err.response?.data?.detail || err.message))
+        showAlert('error', t('alertError'), t('failedToDelete') + ': ' + (err.response?.data?.detail || err.message))
       }
-    }
+    })
   }
 
   const handleAddItem = async (e) => {
@@ -96,9 +106,9 @@ function Inventory() {
       // If it's a validation error array, format it
       if (Array.isArray(errorMsg)) {
         const errors = errorMsg.map(e => e.msg).join(', ')
-        alert('Failed to add item: ' + errors)
+        showAlert('error', t('alertError'), t('failedToAddItem') + ': ' + errors)
       } else {
-        alert('Failed to add item: ' + errorMsg)
+        showAlert('error', t('alertError'), t('failedToAddItem') + ': ' + errorMsg)
       }
       console.error('Add item error:', err.response?.data)
     }
@@ -139,9 +149,9 @@ function Inventory() {
       // If it's a validation error array, format it
       if (Array.isArray(errorMsg)) {
         const errors = errorMsg.map(e => e.msg).join(', ')
-        alert('Failed to update item: ' + errors)
+        showAlert('error', t('alertError'), t('failedToUpdateItem') + ': ' + errors)
       } else {
-        alert('Failed to update item: ' + errorMsg)
+        showAlert('error', t('alertError'), t('failedToUpdateItem') + ': ' + errorMsg)
       }
       console.error('Update item error:', err.response?.data)
     }
@@ -165,7 +175,7 @@ function Inventory() {
               onClick={fetchItems}
               className="mt-2 text-sm bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
             >
-              Retry Connection
+              {t('retryConnection')}
             </button>
           </div>
         </div>
@@ -175,7 +185,7 @@ function Inventory() {
       {loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading items...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('loadingItemsMsg')}</p>
         </div>
       )}
 
@@ -206,7 +216,7 @@ function Inventory() {
             >
               {statusOptions.map(status => (
                 <option key={status} value={status}>
-                  {status === 'all' ? t('allStatus') : status}
+                  {status === 'all' ? t('allStatus') : t(status)}
                 </option>
               ))}
             </select>
@@ -266,7 +276,7 @@ function Inventory() {
                       <td className="py-4 px-6 text-gray-800 dark:text-white">₨ {item.unit_price}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
-                          {status.text}
+                          {t(status.text)}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -474,6 +484,18 @@ function Inventory() {
       >
         <Plus className="w-6 h-6" />
       </button>
+
+      <AlertDialog
+        open={alertDialog.open}
+        type={alertDialog.type}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        confirmText={alertDialog.confirmText}
+        cancelText={alertDialog.cancelText}
+        onConfirm={alertDialog.onConfirm}
+        onCancel={alertDialog.onCancel}
+        showCancel={alertDialog.showCancel}
+      />
     </div>
   )
 }

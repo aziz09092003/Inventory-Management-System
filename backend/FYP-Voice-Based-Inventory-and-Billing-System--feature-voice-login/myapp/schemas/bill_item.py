@@ -49,6 +49,10 @@ class BillItemCreate(BaseModel):
         return v
 
 
+class BillItemBatchCreate(BaseModel):
+    items: list[BillItemCreate]
+
+
 class BillItemRead(BaseModel):
     billitem_id: int
     bill_id: int

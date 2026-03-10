@@ -4,6 +4,7 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 
 from myapp.models.bill import Bill
+from myapp.models.bill_item import BillItem
 from myapp.models.bill_item_history import BillItemHistory
 from myapp.models.udhar import Udhar
 from myapp.models.udhaar_item import UdharItem
@@ -193,6 +194,9 @@ async def delete_bill(db: AsyncSession, bill_id: int, current_user: User):
     # Check if bill is unpaid - don't allow deletion of unpaid bills
     if bill.status == "unpaid":
         return "unpaid"
+
+    # Delete related bill items scoped to user
+    await db.execute(delete(BillItem).where(BillItem.bill_id == bill_id, BillItem.user_id == current_user.user_id))
 
     # Delete related item history scoped to user
     await db.execute(delete(BillItemHistory).where(BillItemHistory.bill_id == bill_id, BillItemHistory.user_id == current_user.user_id))

@@ -12,16 +12,12 @@ router = APIRouter(prefix="/bills", tags=["Bills"])
 @router.get("/customer/{customer_id}", response_model=list[BillRead])
 async def bill_history(customer_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     res = await get_bills_by_customer(db, customer_id, current_user)
-    if not res:
-        raise HTTPException(status_code=404, detail="اس گاہک کا کوئی غیر ادا شدہ بل موجود نہیں")
-    return res
+    return res or []
 
 @router.get("/", response_model=list[BillRead])
 async def get_bills(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     res = await get_all_bills(db, current_user)
-    if not res:
-        raise HTTPException(status_code=404, detail="اس گاہک کا کوئی غیر ادا شدہ بل موجود نہیں")
-    return res
+    return res or []
 
 @router.put("/customer/{customer_id}/pay", response_model=BillRead)
 async def pay_customer_bill(customer_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

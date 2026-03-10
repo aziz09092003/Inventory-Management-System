@@ -1,307 +1,301 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Lock, Mic } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Voice login state
   const [showVoiceLogin, setShowVoiceLogin] = useState(false);
+  const [voiceEmail, setVoiceEmail] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [voiceData, setVoiceData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
   const { login, loginWithVoice } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!username || !password) {
-      setError('Please enter both username and password');
-      return;
-    }
-
-    setIsLoading(true);
+    setLoading(true);
     try {
-      await login({ username, password });
+      await login({ username: email, password });
       navigate('/');
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : 'Invalid username or password');
+      setError(err.response?.data?.detail || 'Invalid email or password');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleVoiceLogin = async () => {
-    setError('');
-    if (!email) {
-      setError('Please enter your email address');
-      return;
-    }
-    if (!voiceData) {
-      setError('Please record your voice first');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const result = await loginWithVoice({ email, audio_base64: voiceData.audio_base64 });
-      if (result.success) {
-        navigate('/');
-      } else {
-        setError(result.message || 'Voice authentication failed');
-      }
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Voice authentication failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Voice recording
   const startRecording = async () => {
-    setIsRecording(true);
-    setError('');
+    if (!voiceEmail.trim()) {
+      setVoiceError('Please enter your email first');
+      return;
+    }
+    setVoiceError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
-      const chunks = [];
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          setVoiceData({ audio_base64: base64 });
-        };
-        reader.readAsDataURL(blob);
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         stream.getTracks().forEach((track) => track.stop());
+
+        // Convert to base64
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Audio = reader.result.split(',')[1];
+          setVoiceLoading(true);
+          try {
+            const result = await loginWithVoice({
+              email: voiceEmail,
+              audio_base64: base64Audio,
+            });
+            if (result.success) {
+              navigate('/');
+            } else {
+              setVoiceError(result.message || 'Voice not recognized');
+            }
+          } catch (err) {
+            setVoiceError(err.response?.data?.detail || 'Voice login failed');
+          } finally {
+            setVoiceLoading(false);
+          }
+        };
+        reader.readAsDataURL(audioBlob);
       };
 
       mediaRecorder.start();
+      setIsRecording(true);
+
+      // Auto stop after 5 seconds
       setTimeout(() => {
-        mediaRecorder.stop();
-        setIsRecording(false);
-      }, 3000);
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+        }
+      }, 5000);
     } catch (err) {
-      setError('Microphone access denied');
+      setVoiceError('Microphone access denied');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
   };
 
   return (
-    <div className="h-screen flex items-center justify-center p-6" style={{ backgroundColor: '#e8e8e8' }}>
-      <div className="w-full bg-white rounded-2xl shadow-2xl overflow-hidden relative" style={{ maxWidth: '750px', height: '460px' }}>
-        
-        {/* Title - top left */}
-        <div className="absolute top-6 left-8 z-10">
-          <h1 className="text-xl font-extrabold text-gray-900">E-Inventory</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Online inventory management system</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f0f2f5' }}>
+      {/* Main Card */}
+      <div
+        className="flex w-full max-w-[960px] bg-white rounded-3xl overflow-hidden"
+        style={{ minHeight: '560px', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
+      >
+        {/* LEFT SIDE — Form */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-10 py-10">
+          {/* Brand */}
+          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">{t('brandName')}</h1>
+          <p className="text-sm text-gray-400 mb-8">{t('brandTagline')}</p>
 
-        {/* Illustration - right side, full height */}
-        <div className="absolute right-0 top-0 bottom-0 hidden md:flex items-end justify-center overflow-hidden" style={{ width: '50%' }}>
-          {/* Light blue background blob */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ width: '250px', height: '250px', backgroundColor: '#d0ebf5' }}></div>
-          
-          {/* Person */}
-          <div className="relative z-10 flex flex-col items-center" style={{ marginBottom: '0px' }}>
-            {/* Head */}
-            <div className="relative">
-              {/* Hair */}
-              <div className="w-16 h-8 rounded-t-full" style={{ backgroundColor: '#2C3E50' }}></div>
-              {/* Face */}
-              <div className="w-12 h-12 rounded-full mx-auto" style={{ backgroundColor: '#FDB99B', marginTop: '-6px' }}></div>
-            </div>
-            
-            {/* Body with arms */}
-            <div className="relative" style={{ marginTop: '-4px' }}>
-              {/* Torso */}
-              <div className="w-32 h-24 rounded-t-3xl relative" style={{ backgroundColor: '#2563EB' }}>
-                {/* White collar/neckline */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-4 bg-white rounded-b-lg"></div>
-                {/* Left arm - pointing at POS */}
-                <div className="absolute -left-8 top-4 w-12 h-8 rounded-full" style={{ backgroundColor: '#2563EB' }}></div>
-                {/* Right arm */}
-                <div className="absolute -right-6 top-6 w-10 h-8 rounded-full" style={{ backgroundColor: '#1D4ED8' }}></div>
-              </div>
-            </div>
-            
-            {/* Desk/Counter */}
-            <div className="relative w-56 h-11 rounded-t-2xl flex items-start justify-center" style={{ backgroundColor: '#E8A87C', marginTop: '-6px' }}>
-              {/* POS Screen */}
-              <div className="absolute -top-12 left-10 flex flex-col items-center">
-                <div className="w-10 h-8 bg-white rounded-md border-2 border-gray-800 shadow-md"></div>
-                <div className="w-6 h-2.5 bg-gray-800 rounded-b-sm"></div>
-                <div className="w-11 h-2.5 bg-gray-700 rounded-sm mt-0.5"></div>
-              </div>
-              {/* Keyboard/device on desk */}
-              <div className="absolute right-12 -top-3 w-8 h-5 bg-gray-200 rounded-sm border border-gray-400"></div>
-            </div>
-            
-            {/* Desk base */}
-            <div className="w-56 h-5 flex">
-              <div className="flex-1 bg-gray-700 rounded-bl-lg"></div>
-              <div className="w-3"></div>
-              <div className="flex-1 bg-gray-700 rounded-br-lg"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Form area - left side */}
-        <div className="absolute left-8 top-20 z-10" style={{ width: '260px' }}>
-          
           {!showVoiceLogin ? (
             <>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Login</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">{t('login')}</h2>
 
               {error && (
-                <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleEmailLogin}>
-                <div className="space-y-3">
-                  {/* Email/Username */}
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:border-blue-400 transition"
-                      placeholder="Email Address"
-                    />
-                  </div>
-
-                  {/* Password */}
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:border-blue-400 transition"
-                      placeholder="Password"
-                    />
-                  </div>
-
-                  {/* Keep me logged in */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600">Keep me logged in</span>
-                    <div
-                      onClick={() => setKeepLoggedIn(!keepLoggedIn)}
-                      className={`w-9 h-5 rounded-full cursor-pointer transition-colors relative ${keepLoggedIn ? 'bg-green-500' : 'bg-gray-300'}`}
-                    >
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${keepLoggedIn ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
-                    </div>
-                  </div>
-
-                  {/* Login Button */}
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm shadow disabled:opacity-50"
-                    style={{ backgroundColor: '#2563EB' }}
-                  >
-                    {isLoading ? 'Logging in...' : 'Log in'}
-                  </button>
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                {/* Email */}
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </span>
+                  <input
+                    type="email"
+                    placeholder={t('emailAddress')}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                  />
                 </div>
+
+                {/* Password */}
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0110 0v4" />
+                    </svg>
+                  </span>
+                  <input
+                    type="password"
+                    placeholder={t('password')}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                  />
+                </div>
+
+                {/* Keep me logged in */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setKeepLoggedIn(!keepLoggedIn)}
+                    className={`relative w-10 h-[22px] rounded-full transition-colors ${keepLoggedIn ? 'bg-green-500' : 'bg-gray-300'}`}
+                  >
+                    <span
+                      className={`absolute top-[2px] left-[2px] w-[18px] h-[18px] bg-white rounded-full shadow transition-transform ${keepLoggedIn ? 'translate-x-[18px]' : ''}`}
+                    />
+                  </button>
+                  <span className="text-sm text-gray-600">{t('keepMeLoggedIn')}</span>
+                </div>
+
+                {/* Login Button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full text-sm transition disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                      {t('loggingIn')}
+                    </span>
+                  ) : (
+                    t('logIn')
+                  )}
+                </button>
               </form>
 
               {/* Voice Login */}
-              <div className="mt-5 flex flex-col items-center">
+              <div className="mt-6 flex flex-col items-center">
                 <button
                   onClick={() => setShowVoiceLogin(true)}
                   className="flex flex-col items-center gap-1 group"
                 >
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-gray-300 group-hover:border-blue-400 transition-colors">
-                    <Mic className="w-5 h-5 text-gray-500 group-hover:text-blue-500 transition-colors" />
+                  <div className="w-14 h-14 rounded-xl border-2 border-blue-200 flex items-center justify-center group-hover:border-blue-400 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
                   </div>
-                  <span className="text-xs text-gray-500 mt-1">Login With Voice</span>
+                  <span className="text-xs text-gray-500 group-hover:text-blue-500 transition">{t('loginWithVoice')}</span>
                 </button>
               </div>
 
               {/* Register link */}
-              <div className="mt-4 text-center">
-                <p className="text-xs text-gray-500">
-                  Don't have an account?{' '}
-                  <Link to="/register" className="font-semibold text-blue-600 hover:underline">
-                    Register here
-                  </Link>
-                </p>
-              </div>
+              <p className="text-center text-sm text-gray-500 mt-5">
+                {t('dontHaveAccount')}{' '}
+                <Link to="/register" className="text-blue-500 hover:underline font-medium">
+                  {t('registerHere')}
+                </Link>
+              </p>
             </>
           ) : (
-            /* Voice Login Mode */
+            /* ─── Voice Login Panel ─── */
             <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Voice Login</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">{t('voiceLoginTitle')}</h2>
 
-              {error && (
-                <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs">
-                  {error}
+              {voiceError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
+                  {voiceError}
                 </div>
               )}
 
-              {/* Email for voice login */}
-              <div className="relative mb-3">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:border-blue-400 transition"
-                  placeholder="Enter your email"
-                />
+              <div className="space-y-4">
+                {/* Email for voice login */}
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </span>
+                  <input
+                    type="email"
+                    placeholder={t('emailAddress')}
+                    value={voiceEmail}
+                    onChange={(e) => setVoiceEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                  />
+                </div>
+
+                {/* Mic button */}
+                <div className="flex flex-col items-center py-4">
+                  <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={voiceLoading}
+                    className={`w-20 h-20 rounded-full flex items-center justify-center transition shadow-lg ${
+                      isRecording
+                        ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    } disabled:opacity-50`}
+                  >
+                    {voiceLoading ? (
+                      <svg className="animate-spin h-8 w-8 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                        <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </svg>
+                    )}
+                  </button>
+                  <p className="text-sm text-gray-500 mt-3">
+                    {voiceLoading ? t('verifying') : isRecording ? t('recordingClickToStop') : t('tapToSpeak')}
+                  </p>
+                </div>
               </div>
 
-              <p className="text-xs text-gray-500 mb-5">Click the microphone and speak clearly for 3 seconds</p>
-
-              <div className="flex flex-col items-center gap-4">
-                <button
-                  onClick={startRecording}
-                  disabled={isRecording}
-                  className={`w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                    isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'
-                  } text-white`}
-                >
-                  <Mic className="w-10 h-10" />
-                </button>
-                <p className="text-xs font-medium text-gray-600">
-                  {isRecording ? 'Recording...' : voiceData ? 'Voice recorded!' : 'Tap to record'}
-                </p>
-              </div>
-
-              {voiceData && (
-                <button
-                  onClick={handleVoiceLogin}
-                  disabled={isLoading}
-                  className="w-full mt-4 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm shadow disabled:opacity-50"
-                  style={{ backgroundColor: '#2563EB' }}
-                >
-                  {isLoading ? 'Authenticating...' : 'Login with Voice'}
-                </button>
-              )}
-
+              {/* Back to email login */}
               <button
-                onClick={() => { setShowVoiceLogin(false); setVoiceData(null); setError(''); }}
-                className="w-full mt-3 bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                onClick={() => { setShowVoiceLogin(false); setVoiceError(''); }}
+                className="w-full py-3 border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold rounded-full text-sm transition mt-2"
               >
-                Back to Email Login
+                {t('backToEmailLogin')}
               </button>
-
-              <div className="mt-3 p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-[10px] text-yellow-700">
-                  <strong>Note:</strong> Register your voice from Settings page after login first.
-                </p>
-              </div>
             </>
           )}
+        </div>
+
+        {/* RIGHT SIDE — Illustration */}
+        <div className="hidden md:flex w-1/2 items-end justify-end relative overflow-hidden">
+          <img
+            src="/Gemini_Generated_Image_tge0h6tge0h6tge0.png"
+            alt="Inventory Management"
+            className="w-full h-full object-cover object-right-bottom"
+          />
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Calendar, TrendingUp, Download, FileSpreadsheet } from 'lucide-react'
 import { itemsAPI, salesAPI, customersAPI, udharsAPI, reportsAPI } from '../services/api'
+import AlertDialog from '../components/AlertDialog'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function Reports() {
@@ -9,6 +10,11 @@ function Reports() {
   const [dateRange, setDateRange] = useState('week')
   const [loading, setLoading] = useState(true)
   const [downloadLoading, setDownloadLoading] = useState(false)
+  const [alertDialog, setAlertDialog] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null, onCancel: null, showCancel: false, confirmText: '', cancelText: '' })
+
+  const showAlert = (type, title, message) => {
+    setAlertDialog({ open: true, type, title, message, onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })), onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })), showCancel: false, confirmText: '', cancelText: '' })
+  }
   const [reportData, setReportData] = useState({
     totalRevenue: 0,
     totalProfit: 0,
@@ -26,32 +32,39 @@ function Reports() {
   const handleDownloadReport = async () => {
     try {
       setDownloadLoading(true)
-      const response = await reportsAPI.downloadInventoryReport()
       
-      // Create blob from response data
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      })
-      
-      // Create download link
+      // Use the reports API to generate report data
+      const response = await reportsAPI.generate()
+      const data = response.data
+
+      // Build CSV from table data
+      const rows = data.table || []
+      if (rows.length === 0) {
+        showAlert('info', t('alertInfo'), t('noReportData'))
+        return
+      }
+
+      const headers = Object.keys(rows[0])
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => headers.map(h => `"${row[h] ?? ''}"`).join(','))
+      ].join('\n')
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      
-      // Generate filename with current date
+
       const date = new Date().toISOString().split('T')[0]
-      link.download = `Inventory_Report_${date}.xlsx`
-      
-      // Trigger download
+      link.download = `Inventory_Report_${date}.csv`
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      // Cleanup
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error downloading report:', error)
-      alert('Failed to download report. Please try again.')
+      showAlert('error', t('alertError'), t('failedToDownloadReport'))
     } finally {
       setDownloadLoading(false)
     }
@@ -93,7 +106,7 @@ function Reports() {
 
       // Filter sales by date range
       const filteredSales = allSales.filter(sale => {
-        const saleDate = new Date(sale.dat)
+        const saleDate = new Date(sale.sale_date)
         return saleDate >= start && saleDate <= end
       })
 
@@ -112,7 +125,7 @@ function Reports() {
       // Generate sales trend data
       const salesByDate = {}
       filteredSales.forEach(sale => {
-        const dateKey = new Date(sale.dat).toLocaleDateString('en-US', { weekday: 'short' })
+        const dateKey = new Date(sale.sale_date).toLocaleDateString('en-US', { weekday: 'short' })
         if (!salesByDate[dateKey]) {
           salesByDate[dateKey] = 0
         }
@@ -215,7 +228,7 @@ function Reports() {
       {loading ? (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{borderColor: '#2C5F6F'}}></div>
-          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">Loading reports...</p>
+          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">{t('loadingReports')}</p>
         </div>
       ) : (
         <>
@@ -268,22 +281,22 @@ function Reports() {
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md p-4 text-white">
               <p className="text-xs opacity-90 mb-0.5">{t('totalRevenue')}</p>
               <p className="text-2xl font-bold">₨ {reportData.totalRevenue.toLocaleString()}</p>
-              <p className="text-xs mt-1.5 opacity-90">{dateRange === 'today' ? t('today') : `This ${dateRange}`}</p>
+              <p className="text-xs mt-1.5 opacity-90">{dateRange === 'today' ? t('today') : t(dateRange === 'week' ? 'thisWeek' : dateRange === 'month' ? 'thisMonth' : 'thisYear')}</p>
             </div>
             <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
               <p className="text-xs opacity-90 mb-0.5">{t('totalProfit')}</p>
               <p className="text-2xl font-bold">₨ {reportData.totalProfit.toLocaleString()}</p>
-              <p className="text-xs mt-1.5 opacity-90">20% margin</p>
+              <p className="text-xs mt-1.5 opacity-90">{t('profitMarginPct')}</p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
               <p className="text-xs opacity-90 mb-0.5">{t('totalTransactions')}</p>
               <p className="text-2xl font-bold">{reportData.totalTransactions}</p>
-              <p className="text-xs mt-1.5 opacity-90">Sales count</p>
+              <p className="text-xs mt-1.5 opacity-90">{t('salesCount')}</p>
             </div>
             <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-md p-4 text-white">
               <p className="text-xs opacity-90 mb-0.5">{t('avgTransaction')}</p>
               <p className="text-2xl font-bold">₨ {reportData.avgTransaction.toLocaleString()}</p>
-              <p className="text-xs mt-1.5 opacity-90">Per sale</p>
+              <p className="text-xs mt-1.5 opacity-90">{t('perSale')}</p>
             </div>
           </div>
 
@@ -379,6 +392,18 @@ function Reports() {
           </div>
         </>
       )}
+
+      <AlertDialog
+        open={alertDialog.open}
+        type={alertDialog.type}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        confirmText={alertDialog.confirmText}
+        cancelText={alertDialog.cancelText}
+        onConfirm={alertDialog.onConfirm}
+        onCancel={alertDialog.onCancel}
+        showCancel={alertDialog.showCancel}
+      />
     </div>
   )
 }

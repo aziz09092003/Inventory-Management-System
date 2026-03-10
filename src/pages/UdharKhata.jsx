@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Filter, Clock, CheckCircle, XCircle, Trash2, AlertCircle, Search, AlertTriangle } from 'lucide-react'
 import { customersAPI, udharsAPI } from '../services/api'
+import AlertDialog from '../components/AlertDialog'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function UdharKhata() {
@@ -25,6 +26,15 @@ function UdharKhata() {
   const [newAmount, setNewAmount] = useState(0)
   const [addUdharAmount, setAddUdharAmount] = useState('')
   const [paymentAmount, setPaymentAmount] = useState('')
+  const [alertDialog, setAlertDialog] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null, onCancel: null, showCancel: false, confirmText: '', cancelText: '' })
+
+  const showAlert = (type, title, message) => {
+    setAlertDialog({ open: true, type, title, message, onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })), onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })), showCancel: false, confirmText: '', cancelText: '' })
+  }
+
+  const showConfirm = (type, title, message, onYes) => {
+    setAlertDialog({ open: true, type, title, message, showCancel: true, confirmText: t('yes'), cancelText: t('no'), onConfirm: () => { setAlertDialog(prev => ({ ...prev, open: false })); onYes(); }, onCancel: () => setAlertDialog(prev => ({ ...prev, open: false })) })
+  }
 
   // Load data from localStorage
   useEffect(() => {
@@ -42,7 +52,7 @@ function UdharKhata() {
       setCustomers(customersRes.data)
       setUdhars(udharsRes.data)
     } catch (err) {
-      setError('Failed to load data. Please try again.')
+      setError(t('failedToLoadData'))
       console.error('Error fetching data:', err)
     } finally {
       setLoading(false)
@@ -55,10 +65,10 @@ function UdharKhata() {
     return {
       id: customer.customer_id,
       name: customer.customer_name,
-      amount: udhar ? udhar.effective_total : 0,
-      paid: udhar ? udhar.effective_status === 'paid' : true,
+      amount: udhar ? (udhar.total || 0) : 0,
+      paid: udhar ? udhar.status === 'paid' : true,
       udhar_id: udhar?.udhar_id,
-      paidAmount: udhar ? udhar.direct_deduction : 0
+      paidAmount: udhar ? (udhar.direct_deduction || 0) : 0
     }
   })
 
@@ -81,7 +91,7 @@ function UdharKhata() {
     e.preventDefault()
     try {
       if (!newCustomerName.trim()) {
-        alert('Please enter customer name')
+        showAlert('warning', t('alertWarning'), t('pleaseEnterCustomerName'))
         return
       }
       
@@ -89,18 +99,35 @@ function UdharKhata() {
       const existingCustomer = customers.find(
         c => c.customer_name === newCustomerName.trim()
       )
-      if (existingCustomer) {
-        alert(`Customer with name "${newCustomerName.trim()}" already exists!`)
-        return
-      }
       
-      // Create customer
-      const customerData = { customer_name: newCustomerName.trim() }
-      const customerRes = await customersAPI.create(customerData)
+      let customerId
+      if (existingCustomer) {
+        customerId = existingCustomer.customer_id
+      } else {
+        // Create customer
+        const customerData = { customer_name: newCustomerName.trim() }
+        try {
+          const customerRes = await customersAPI.create(customerData)
+          customerId = customerRes.data.customer_id
+        } catch (createErr) {
+          // If customer already exists (race condition), fetch and find them
+          if (createErr.response?.status === 400) {
+            const allCust = await customersAPI.getAll()
+            const found = (allCust.data || []).find(c => c.customer_name === newCustomerName.trim())
+            if (found) {
+              customerId = found.customer_id
+            } else {
+              throw createErr
+            }
+          } else {
+            throw createErr
+          }
+        }
+      }
       
       // If amount is provided, create udhar entry with direct addition
       if (newAmount > 0) {
-        await udharsAPI.updateDirectAddition(customerRes.data.customer_id, Number(newAmount))
+        await udharsAPI.updateDirectAddition(customerId, Number(newAmount))
       }
       
       // Refresh data
@@ -109,7 +136,7 @@ function UdharKhata() {
       setNewCustomerName('')
       setNewAmount(0)
     } catch (err) {
-      alert('Failed to add entry: ' + (err.response?.data?.detail || err.message))
+      showAlert('error', t('alertError'), t('failedToAddEntry') + ': ' + (err.response?.data?.detail || err.message))
       console.error('Add entry error:', err)
     }
   }
@@ -121,7 +148,7 @@ function UdharKhata() {
       
       const amount = Number(addUdharAmount)
       if (isNaN(amount) || amount <= 0) {
-        alert('Please enter a valid amount greater than 0')
+        showAlert('warning', t('alertWarning'), t('pleaseEnterValidAmountGt0'))
         return
       }
       
@@ -134,7 +161,7 @@ function UdharKhata() {
       setAddUdharCustomer(null)
       setAddUdharAmount('')
     } catch (err) {
-      alert('Failed to add udhar: ' + (err.response?.data?.detail || err.message))
+      showAlert('error', t('alertError'), t('failedToAddUdhar') + ': ' + (err.response?.data?.detail || err.message))
       console.error('Add udhar error:', err)
     }
   }
@@ -148,20 +175,20 @@ function UdharKhata() {
     }
     
     // If amount is 0, proceed with deletion
-    if (window.confirm(`Are you sure you want to delete ${customer.name}? This will remove all their records.`)) {
+    showConfirm('warning', t('alertWarning'), t('confirmDeleteCustomer').replace('{name}', customer.name), async () => {
       try {
         console.log('Attempting to delete customer:', customer.id)
         const response = await customersAPI.delete(customer.id)
         console.log('Delete response:', response)
-        alert('Customer deleted successfully!')
+        showAlert('success', t('alertSuccess'), t('customerDeletedSuccess'))
         await fetchData()
       } catch (err) {
         console.error('Delete error:', err)
         console.error('Error response:', err.response)
         const errorMsg = err.response?.data?.detail || err.message || 'Unknown error occurred'
-        alert('Failed to delete: ' + errorMsg)
+        showAlert('error', t('alertError'), t('failedToDeleteCustomer') + ': ' + errorMsg)
       }
-    }
+    })
   }
 
   const handleAddUdharClick = (customer) => {
@@ -181,12 +208,12 @@ function UdharKhata() {
     
     const amount = Number(paymentAmount)
     if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount')
+      showAlert('warning', t('alertWarning'), t('pleaseEnterValidAmount'))
       return
     }
     
     if (amount > paymentCustomer.amount) {
-      alert('Payment amount cannot exceed the current udhar amount')
+      showAlert('warning', t('alertWarning'), t('paymentExceedsUdhar'))
       return
     }
     
@@ -198,7 +225,7 @@ function UdharKhata() {
       setPaymentCustomer(null)
       setPaymentAmount('')
     } catch (err) {
-      alert('Failed to process payment: ' + (err.response?.data?.detail || err.message))
+      showAlert('error', t('alertError'), t('failedToProcessPayment') + ': ' + (err.response?.data?.detail || err.message))
     }
   }
 
@@ -222,12 +249,12 @@ function UdharKhata() {
           <AlertCircle className="w-5 h-5 text-red-600" />
           <div>
             <p className="text-red-800 font-medium">{error}</p>
-            <p className="text-red-600 text-sm">Unable to load data. Please refresh the page.</p>
+            <p className="text-red-600 text-sm">{t('unableToLoadPlsRefresh')}</p>
             <button 
               onClick={fetchData}
               className="mt-2 text-sm bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
             >
-              Retry Connection
+              {t('retryConnection')}
             </button>
           </div>
         </div>
@@ -237,7 +264,7 @@ function UdharKhata() {
       {loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
-          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">Loading data...</p>
+          <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">{t('loadingData')}</p>
         </div>
       )}
 
@@ -355,7 +382,7 @@ function UdharKhata() {
                     <button
                       onClick={() => handleDelete(customer)}
                       className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                      title="Delete"
+                      title={t('deleteLabel')}
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -644,6 +671,18 @@ function UdharKhata() {
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={alertDialog.open}
+        type={alertDialog.type}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        confirmText={alertDialog.confirmText}
+        cancelText={alertDialog.cancelText}
+        onConfirm={alertDialog.onConfirm}
+        onCancel={alertDialog.onCancel}
+        showCancel={alertDialog.showCancel}
+      />
     </div>
   )
 }

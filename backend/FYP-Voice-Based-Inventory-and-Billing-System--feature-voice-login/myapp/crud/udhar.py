@@ -104,6 +104,13 @@ async def update_direct_addition(db: AsyncSession, customer_id: int, amount: flo
         )
         db.add(udhar)
         await db.flush()
+        # Re-fetch with eager-loaded relationships to avoid lazy-load greenlet error
+        res = await db.execute(
+            select(Udhar)
+                .options(selectinload(Udhar.udharitems))
+                .where(Udhar.udhar_id == udhar.udhar_id)
+        )
+        udhar = res.scalar_one()
 
     # Apply addition
     udhar.direct_addition += amount
@@ -173,6 +180,13 @@ async def update_direct_deduction(db: AsyncSession, customer_id: int, amount: fl
         )
         db.add(udhar)
         await db.flush()
+        # Re-fetch with eager-loaded relationships to avoid lazy-load greenlet error
+        res = await db.execute(
+            select(Udhar)
+                .options(selectinload(Udhar.udharitems))
+                .where(Udhar.udhar_id == udhar.udhar_id)
+        )
+        udhar = res.scalar_one()
 
     # Apply deduction
     udhar.direct_deduction += amount
