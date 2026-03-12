@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date
-from typing import List,Optional
+from typing import List, Optional
 
 
 class BillItemHistoryRead(BaseModel):
@@ -12,6 +12,18 @@ class BillItemHistoryRead(BaseModel):
 
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ReturnItemRequest(BaseModel):
+    item_name: str
+    return_qty: float
+
+
+class ReturnBillRequest(BaseModel):
+    return_type: str  # 'full' or 'partial'
+    items: List[ReturnItemRequest]
+    reason: str
+
 
 class BillRead(BaseModel):
     bill_id: int

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Filter, Clock, CheckCircle, XCircle, Trash2, AlertCircle, Search, AlertTriangle } from 'lucide-react'
-import { customersAPI, udharsAPI } from '../services/api'
+import { Plus, Filter, Clock, CheckCircle, XCircle, Trash2, AlertCircle, Search, AlertTriangle, Eye, Package, X } from 'lucide-react'
+import { customersAPI, udharsAPI, udharItemsAPI } from '../services/api'
 import AlertDialog from '../components/AlertDialog'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -19,6 +19,10 @@ function UdharKhata() {
   const [udhars, setUdhars] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showItemsModal, setShowItemsModal] = useState(false)
+  const [itemsCustomer, setItemsCustomer] = useState(null)
+  const [customerItems, setCustomerItems] = useState([])
+  const [itemsLoading, setItemsLoading] = useState(false)
 
   // Add form state
   // Add form state
@@ -229,6 +233,22 @@ function UdharKhata() {
     }
   }
 
+  const handleViewItems = async (customer) => {
+    setItemsCustomer(customer)
+    setShowItemsModal(true)
+    setItemsLoading(true)
+    try {
+      const res = await udharItemsAPI.getByCustomerId(customer.id)
+      setCustomerItems(res.data || [])
+    } catch (err) {
+      console.error('Error fetching customer items:', err)
+      setCustomerItems([])
+      showAlert('error', t('alertError'), t('failedToLoadItems') + ': ' + (err.response?.data?.detail || err.message))
+    } finally {
+      setItemsLoading(false)
+    }
+  }
+
   const totalUnpaid = customersWithUdhar
     .filter(c => !c.paid)
     .reduce((sum, c) => sum + c.amount, 0)
@@ -379,6 +399,16 @@ function UdharKhata() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleViewItems(customer)}
+                      className="p-2 rounded-lg text-white transition-colors"
+                      style={{backgroundColor: '#2C5F6F'}}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#234A57'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#2C5F6F'}
+                      title={t('viewItems')}
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
                     <button
                       onClick={() => handleDelete(customer)}
                       className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
@@ -640,7 +670,6 @@ function UdharKhata() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                   placeholder={t('enterAmountToPay')}
                   min="0"
-                  max={paymentCustomer.amount}
                   step="0.01"
                   autoFocus
                 />
@@ -668,6 +697,94 @@ function UdharKhata() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Customer Items Modal */}
+      {showItemsModal && itemsCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                  {itemsCustomer.name} — {t('udharItems')}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {t('totalUdhar')}: <span className="font-semibold text-red-600">Rs {itemsCustomer.amount.toLocaleString()}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowItemsModal(false)
+                  setItemsCustomer(null)
+                  setCustomerItems([])
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {itemsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
+                  <p className="mt-3 text-gray-500 dark:text-gray-400 text-sm">{t('loadingData')}</p>
+                </div>
+              ) : customerItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">{t('noItemsFound')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {customerItems.map((item) => (
+                    <div
+                      key={item.udharitem_id}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-gray-800 dark:text-white text-base">
+                          {item.item_name}
+                        </h4>
+                        <span className="text-lg font-bold" style={{color: '#2C5F6F'}}>
+                          Rs {item.total_amount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
+                        <span>{t('quantity')}: <strong>{item.quantity} {item.requested_unit}</strong></span>
+                        <span>{t('unitPrice')}: <strong>Rs {item.unit_price.toLocaleString()}</strong></span>
+                        <span>{t('date')}: <strong>{item.created_date}</strong></span>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Total summary at bottom */}
+                  <div className="border-t border-gray-300 dark:border-gray-600 pt-3 mt-3 flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('totalItems')}: {customerItems.length}</span>
+                    <span className="text-lg font-bold text-gray-800 dark:text-white">
+                      {t('total')}: Rs {customerItems.reduce((sum, i) => sum + i.total_amount, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowItemsModal(false)
+                  setItemsCustomer(null)
+                  setCustomerItems([])
+                }}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                {t('close')}
+              </button>
+            </div>
           </div>
         </div>
       )}

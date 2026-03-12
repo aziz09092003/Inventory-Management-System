@@ -1,9 +1,11 @@
 # crud/items.py
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from myapp.models.item import Item
+from myapp.models.sales import Sale
+from myapp.models.udhaar_item import UdharItem
 from myapp.models.user import User
 from myapp.schemas.items import ItemCreate, ItemUpdate
 
@@ -62,6 +64,9 @@ async def delete_item(db: AsyncSession, item_id: int, current_user: User):
     db_item = await read_item(db, item_id, current_user)
     if not db_item:
         return None
+    # Delete related sales and udhar items that reference this item
+    await db.execute(delete(Sale).where(Sale.item_id == item_id, Sale.user_id == current_user.user_id))
+    await db.execute(delete(UdharItem).where(UdharItem.item_id == item_id, UdharItem.user_id == current_user.user_id))
     await db.delete(db_item)
     await db.commit()
     return True

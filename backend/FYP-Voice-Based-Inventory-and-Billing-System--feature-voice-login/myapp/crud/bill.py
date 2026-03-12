@@ -6,6 +6,8 @@ from datetime import datetime
 from myapp.models.bill import Bill
 from myapp.models.bill_item import BillItem
 from myapp.models.bill_item_history import BillItemHistory
+from myapp.models.item import Item
+from myapp.models.sales import Sale
 from myapp.models.udhar import Udhar
 from myapp.models.udhaar_item import UdharItem
 from myapp.models.user import User
@@ -206,3 +208,66 @@ async def delete_bill(db: AsyncSession, bill_id: int, current_user: User):
 
     await db.commit()
     return True
+
+
+async def return_bill(db: AsyncSession, bill_id: int, data: dict, current_user: User):
+    """Process a return for a bill. Restores inventory, removes sales records, and updates the bill."""
+    res = await db.execute(
+        select(Bill)
+        .options(selectinload(Bill.items), selectinload(Bill.billitems))
+        .where(Bill.bill_id == bill_id, Bill.user_id == current_user.user_id)
+    )
+    bill = res.scalar_one_or_none()
+    if not bill:
+        return None
+
+    return_type = data["return_type"]
+    return_items_data = {item["item_name"]: item["return_qty"] for item in data["items"]}
+    refund_amount = 0.0
+
+    # Process each item in the bill
+    for history_item in bill.items:
+        if return_type == "full":
+            return_qty = history_item.quantity
+        elif history_item.item_name in return_items_data:
+            return_qty = return_items_data[history_item.item_name]
+        else:
+            continue
+
+        if return_qty <= 0:
+            continue
+
+        refund_amount += return_qty * history_item.unit_price
+
+        # Restore inventory - find item by name
+        item_res = await db.execute(
+            select(Item).where(Item.item_name == history_item.item_name, Item.user_id == current_user.user_id)
+        )
+        item = item_res.scalar_one_or_none()
+        if item:
+            item.stock_quantity = float(item.stock_quantity) + return_qty
+
+            # Delete matching sale record for this item
+            sale_res = await db.execute(
+                select(Sale).where(
+                    Sale.item_id == item.item_id,
+                    Sale.user_id == current_user.user_id,
+                    Sale.quantity_sold == return_qty,
+                ).order_by(Sale.sale_id.desc())
+            )
+            sale = sale_res.scalar_one_or_none()
+            if sale:
+                await db.execute(delete(Sale).where(Sale.sale_id == sale.sale_id))
+
+    # For full returns, delete all bill items/history and mark returned
+    if return_type == "full":
+        await db.execute(delete(BillItem).where(BillItem.bill_id == bill_id, BillItem.user_id == current_user.user_id))
+        await db.execute(delete(BillItemHistory).where(BillItemHistory.bill_id == bill_id, BillItemHistory.user_id == current_user.user_id))
+        bill.status = "returned"
+        bill.effective_total = 0
+    else:
+        # Partial return - update bill total
+        bill.effective_total = max(0, float(bill.effective_total) - refund_amount)
+
+    await db.commit()
+    return {"message": "واپسی کامیابی سے ہو گئی", "refund_amount": refund_amount, "bill_id": bill_id}

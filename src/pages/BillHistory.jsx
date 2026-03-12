@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Receipt, Search, Calendar, Filter, Eye, Trash2, DollarSign, TrendingUp, FileText } from 'lucide-react'
+import { Receipt, Search, Calendar, Filter, Eye, Trash2, DollarSign, TrendingUp, FileText, Users, X, ChevronRight } from 'lucide-react'
 import { billsAPI, customersAPI } from '../services/api'
 import ReceiptComponent from '../components/Receipt'
 import AlertDialog from '../components/AlertDialog'
@@ -15,6 +15,10 @@ function BillHistory() {
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [todaySummary, setTodaySummary] = useState(null)
   const [customersMap, setCustomersMap] = useState({})
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'byCustomer'
+  const [showCustomerBillsModal, setShowCustomerBillsModal] = useState(false)
+  const [selectedCustomerBills, setSelectedCustomerBills] = useState([])
+  const [selectedCustomerName, setSelectedCustomerName] = useState('')
   const [alertDialog, setAlertDialog] = useState({ open: false, type: 'info', title: '', message: '', onConfirm: null, onCancel: null, showCancel: false, confirmText: '', cancelText: '' })
 
   const showAlert = (type, title, message) => {
@@ -84,6 +88,30 @@ function BillHistory() {
   }
 
   const getCustomerName = (bill) => customersMap[bill.customer_id] || ''
+
+  // Group bills by customer for the by-customer view
+  const billsByCustomer = bills.reduce((acc, bill) => {
+    const name = getCustomerName(bill) || t('walkInCustomer')
+    if (!acc[name]) acc[name] = []
+    acc[name].push(bill)
+    return acc
+  }, {})
+
+  const customerSummaries = Object.entries(billsByCustomer)
+    .map(([name, custBills]) => ({
+      name,
+      count: custBills.length,
+      total: custBills.reduce((s, b) => s + (b.effective_total || 0), 0),
+      bills: custBills.sort((a, b) => new Date(b.bill_date) - new Date(a.bill_date))
+    }))
+    .filter(c => searchTerm === '' || c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => b.total - a.total)
+
+  const handleViewCustomerBills = (customer) => {
+    setSelectedCustomerName(customer.name)
+    setSelectedCustomerBills(customer.bills)
+    setShowCustomerBillsModal(true)
+  }
 
   const filteredBills = bills.filter(bill => {
     // Client-side filter by status
@@ -172,38 +200,116 @@ function BillHistory() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters + View Toggle */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder={t('searchBillOrCustomer')}
+              placeholder={viewMode === 'byCustomer' ? t('searchCustomer') : t('searchBillOrCustomer')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white text-sm"
             />
           </div>
 
-          {/* Payment Type Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white appearance-none text-sm"
+          {/* Payment Type Filter — only shown in list mode */}
+          {viewMode === 'list' && (
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white appearance-none text-sm"
+              >
+                <option value="all">{t('allBills')}</option>
+                <option value="cash">{t('cashOnly')}</option>
+                <option value="udhar">{t('creditOnly')}</option>
+              </select>
+            </div>
+          )}
+
+          {/* View Mode Toggle */}
+          <div className={`flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 ${viewMode === 'byCustomer' ? 'md:col-span-2' : ''}`}>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+              style={viewMode === 'list' ? {backgroundColor: '#2C5F6F'} : {}}
             >
-              <option value="all">{t('allBills')}</option>
-              <option value="cash">{t('cashOnly')}</option>
-              <option value="udhar">{t('creditOnly')}</option>
-            </select>
+              <FileText className="w-4 h-4" />
+              {t('allBillsList')}
+            </button>
+            <button
+              onClick={() => setViewMode('byCustomer')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'byCustomer'
+                  ? 'text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+              style={viewMode === 'byCustomer' ? {backgroundColor: '#2C5F6F'} : {}}
+            >
+              <Users className="w-4 h-4" />
+              {t('byCustomer')}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Bills Table */}
+      {/* By-Customer View */}
+      {viewMode === 'byCustomer' && (
+        <div>
+          {loading ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{borderColor: '#2C5F6F'}}></div>
+            </div>
+          ) : customerSummaries.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
+              <Users className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">{t('noCustomersFound')}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {customerSummaries.map((customer) => (
+                <div
+                  key={customer.name}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border-l-4 hover:shadow-lg transition-shadow cursor-pointer"
+                  style={{borderLeftColor: '#2C5F6F'}}
+                  onClick={() => handleViewCustomerBills(customer)}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">{customer.name}</h3>
+                      <p className="text-2xl font-bold mt-1" style={{color: '#2C5F6F'}}>
+                        {formatCurrency(customer.total)}
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-lg" style={{backgroundColor: 'rgba(44,95,111,0.1)'}}>
+                      <Receipt className="w-5 h-5" style={{color: '#2C5F6F'}} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {customer.count} {customer.count === 1 ? t('bill') : t('bills')}
+                    </span>
+                    <span className="flex items-center gap-1 text-sm font-medium" style={{color: '#2C5F6F'}}>
+                      {t('viewAllBills')} <ChevronRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bills Table — list mode */}
+      {viewMode === 'list' && (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -305,6 +411,95 @@ function BillHistory() {
           </div>
         )}
       </div>
+      )} {/* end viewMode === 'list' */}
+
+      {/* Customer Bills Modal */}
+      {showCustomerBillsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <Receipt className="w-5 h-5" style={{color: '#2C5F6F'}} />
+                  {selectedCustomerName} — {t('allBillsOf')}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {selectedCustomerBills.length} {t('bills')} · {t('total')}: <span className="font-semibold" style={{color: '#2C5F6F'}}>{formatCurrency(selectedCustomerBills.reduce((s, b) => s + (b.effective_total || 0), 0))}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCustomerBillsModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {selectedCustomerBills.map((bill) => (
+                <div key={bill.bill_id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">#{bill.bill_id}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        bill.status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {bill.status === 'paid' ? t('cash') : t('credit')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold text-gray-900 dark:text-white">{formatCurrency(bill.effective_total)}</span>
+                      <button
+                        onClick={() => { setShowCustomerBillsModal(false); handleViewBill(bill) }}
+                        className="p-1.5 rounded-lg transition-colors hover:bg-gray-200 dark:hover:bg-gray-600"
+                        style={{color: '#2C5F6F'}}
+                        title={t('viewBill')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { setShowCustomerBillsModal(false); handleDeleteBill(bill.bill_id) }}
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        title={t('deleteBill')}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    <span>{t('dateTime')}: <strong className="text-gray-700 dark:text-gray-200">{formatDate(bill.bill_date)}</strong></span>
+                    <span>{t('items')}: <strong className="text-gray-700 dark:text-gray-200">{bill.items?.length || 0}</strong></span>
+                  </div>
+                  {/* Item names preview */}
+                  {bill.items && bill.items.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {bill.items.map((item, idx) => (
+                        <span key={idx} className="bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 text-xs px-2 py-0.5 rounded-full text-gray-600 dark:text-gray-300">
+                          {item.item_name} × {item.quantity}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowCustomerBillsModal(false)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                {t('close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Receipt Modal */}
       {showReceiptModal && selectedBill && (

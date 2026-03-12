@@ -77,3 +77,22 @@ class UdharRead(BaseModel):
     udhar_day_name: str
     
     model_config = ConfigDict(from_attributes=True)
+
+class UdharItemDetailRead(BaseModel):
+    """Response schema with item name for customer view"""
+    udharitem_id: int
+    customer_id: int
+    item_id: int
+    item_name: str
+    unit_price: float
+    quantity: float
+    requested_unit: str
+    total_amount: float
+    created_date: date
+    udhar_day: str
+    udhar_month: str
+    udhar_year: str
+    udhar_time: str
+    udhar_day_name: str
+    
+    model_config = ConfigDict(from_attributes=True)

@@ -258,24 +258,23 @@ function Sales() {
     }
 
     try {
-      // Calculate refund amount
-      const refundAmount = itemsToReturn.reduce((sum, item) => {
-        const qty = returnType === 'full' ? item.quantity : item.returnQty
-        return sum + (qty * item.unit_price)
-      }, 0)
-
-      // Update inventory - add stock back
-      for (const item of itemsToReturn) {
-        const qty = returnType === 'full' ? item.quantity : item.returnQty
-        const currentItem = items.find(i => i.item_name === item.item_name)
-        if (currentItem) {
-          await itemsAPI.update(currentItem.item_id, {
-            stock_quantity: currentItem.stock_quantity + qty
-          })
-        }
+      // Call backend return endpoint which handles:
+      // - Restoring inventory
+      // - Deleting sale records
+      // - Updating bill status and totals
+      const returnData = {
+        return_type: returnType,
+        items: itemsToReturn.map(item => ({
+          item_name: item.item_name,
+          return_qty: returnType === 'full' ? item.quantity : item.returnQty,
+        })),
+        reason: returnReason,
       }
 
-      // Create return record
+      const result = await billsAPI.returnBill(selectedBill.bill_id, returnData)
+      const refundAmount = result.data.refund_amount
+
+      // Save return record locally for return history display
       const returnRecord = {
         return_id: Date.now(),
         bill_id: selectedBill.bill_id,
@@ -295,9 +294,6 @@ function Sales() {
       const updatedReturns = [...returns, returnRecord]
       setReturns(updatedReturns)
       saveReturns(updatedReturns)
-
-      // Update bill status
-      // In a real system, you'd update the bill to mark it as returned
       
       showAlert('success', t('alertSuccess'), t('returnProcessedSuccess') + '\n' + t('refundAmountLabel').replace('{amount}', refundAmount.toFixed(2)))
       setShowReturnModal(false)

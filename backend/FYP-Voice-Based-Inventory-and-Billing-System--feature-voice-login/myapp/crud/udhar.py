@@ -3,7 +3,6 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from myapp.models.udhar import Udhar
 from myapp.models.udhaar_item import UdharItem
-from myapp.crud.bill import sync_bill_from_udhar
 from myapp.models.user import User
 from myapp.models.customer import Customer
 from sqlalchemy.orm import selectinload
@@ -65,8 +64,6 @@ async def update_udhar_summary(db: AsyncSession, customer_id: int, current_user:
 
     await db.commit()
     await db.refresh(udhar)
-
-    await sync_bill_from_udhar(db, customer_id, current_user)
     return udhar
 
 
@@ -140,7 +137,6 @@ async def update_direct_addition(db: AsyncSession, customer_id: int, amount: flo
 
     await db.commit()
     await db.refresh(udhar)
-    await sync_bill_from_udhar(db, customer_id, current_user)
     return udhar
 
 
@@ -216,7 +212,6 @@ async def update_direct_deduction(db: AsyncSession, customer_id: int, amount: fl
 
     await db.commit()
     await db.refresh(udhar)
-    await sync_bill_from_udhar(db, customer_id, current_user)
     return udhar
 
 

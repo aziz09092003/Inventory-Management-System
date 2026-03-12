@@ -205,11 +205,17 @@ export const billsAPI = {
     wrapResponse(api.put(`/bills/customer/${customerId}/pay`)),
 
   delete: (billId) => wrapResponse(api.delete(`/bills/${billId}`)),
+
+  returnBill: (billId, data) =>
+    wrapResponse(api.post(`/bills/${billId}/return`, data)),
 }
 
 // ==================== UDHAR ITEMS API ====================
 export const udharItemsAPI = {
   getAll: () => wrapResponse(api.get('/udhar-items/')),
+
+  getByCustomerId: (customerId) =>
+    wrapResponse(api.get(`/udhar-items/customer/${customerId}`)),
 
   create: (udharData) =>
     wrapResponse(

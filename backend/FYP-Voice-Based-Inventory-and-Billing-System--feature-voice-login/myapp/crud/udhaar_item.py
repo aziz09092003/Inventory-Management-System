@@ -7,6 +7,8 @@ from myapp.models.item import Item
 from myapp.models.udhar import Udhar   
 from myapp.models.udhaar_item import UdharItem
 from myapp.models.sales import Sale
+from myapp.models.bill import Bill
+from myapp.models.bill_item_history import BillItemHistory
 from myapp.utils.units import UnitConverter
 from myapp.crud.udhar import update_udhar_summary
 from myapp.models.user import User
@@ -113,16 +115,41 @@ async def create_udhar(
     # Deduct inventory (in base unit)
     item.stock_quantity = float(item.stock_quantity) - qty_in_base
 
+    # Create a new Bill for this specific udhar purchase (one bill per purchase)
+    bill_urdu = convert_datetime_to_urdu(now, "bill")
+    new_bill = Bill(
+        customer_id=customer.customer_id,
+        user_id=current_user.user_id,
+        effective_total=total_amount,
+        udhar_items_total=total_amount,
+        direct_addition=0.0,
+        direct_deduction=0.0,
+        status="unpaid",
+        bill_day=bill_urdu["bill_day"],
+        bill_month=bill_urdu["bill_month"],
+        bill_year=bill_urdu["bill_year"],
+        bill_time=bill_urdu["bill_time"],
+        bill_day_name=bill_urdu["bill_day_name"]
+    )
+    db.add(new_bill)
+    await db.flush()
+
+    # BillItemHistory so this bill shows items in Bill History
+    db.add(BillItemHistory(
+        bill_id=new_bill.bill_id,
+        user_id=current_user.user_id,
+        item_name=item.item_name,
+        unit_price=unit_price_base,
+        quantity=quantity,
+        requested_unit=unit.strip(),
+        total_amount=total_amount,
+    ))
+
     await db.commit()
     await db.refresh(udhar_item)
-    await db.refresh(sale)
-    await db.refresh(item)
 
+    # Update udhar summary totals (no bill syncing)
     await update_udhar_summary(db, customer.customer_id, current_user)
-# After db.commit() and refreshes
-    await update_udhar_summary(db, customer.customer_id, current_user)
-# Also refresh udhar itself
-    await db.refresh(udhar)
 
     return udhar_item
 
@@ -142,8 +169,10 @@ async def list_udharitems(db: AsyncSession, current_user: User):
 
 
 async def list_udharitems_by_customer(db: AsyncSession, customer_id: int, current_user: User):
+    from sqlalchemy.orm import selectinload
     res = await db.execute(
         select(UdharItem)
+        .options(selectinload(UdharItem.item))
         .where(UdharItem.customer_id == customer_id, UdharItem.user_id == current_user.user_id)
         .order_by(UdharItem.created_date.desc())
     )

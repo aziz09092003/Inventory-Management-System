@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends,HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from myapp.database.session import get_db
-from myapp.schemas.bill import BillRead
-from myapp.crud.bill import get_bills_by_customer,get_all_bills,pay_bill,delete_bill
+from myapp.schemas.bill import BillRead, ReturnBillRequest
+from myapp.crud.bill import get_bills_by_customer,get_all_bills,pay_bill,delete_bill,return_bill
 from myapp.models.user import User
 from myapp.utils.security import get_current_user
 
@@ -34,3 +34,10 @@ async def delete_bill_endpoint(bill_id: int, db: AsyncSession = Depends(get_db),
     if not result:
         raise HTTPException(status_code=404, detail="بل نہیں ملا")
     return {"پیغام": f"بل {bill_id} کامیابی سے حذف کر دیا گیا"}
+
+@router.post("/{bill_id}/return")
+async def return_bill_endpoint(bill_id: int, data: ReturnBillRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await return_bill(db, bill_id, data.model_dump(), current_user)
+    if result is None:
+        raise HTTPException(status_code=404, detail="بل نہیں ملا")
+    return result

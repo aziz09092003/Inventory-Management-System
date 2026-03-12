@@ -155,6 +155,8 @@ export const translations = {
     noCustomersFound: 'No customers found',
     processPayment: 'Process Payment',
     maximum: 'Maximum',
+    viewItems: 'View Items',
+    udharItems: 'Udhar Items',
     
     // Reports
     reportsAnalytics: 'Reports & Analytics',
@@ -204,6 +206,10 @@ export const translations = {
     paymentType: 'Payment Type',
     allPayments: 'All Payments',
     allBills: 'All Bills',
+    allBillsList: 'All Bills',
+    byCustomer: 'By Customer',
+    viewAllBills: 'View All Bills',
+    allBillsOf: 'All Bills',
     cashOnly: 'Cash Only',
     creditOnly: 'Credit Only',
     startDate: 'Start Date',
@@ -669,6 +675,8 @@ export const translations = {
     noCustomersFound: 'کوئی گاہک نہیں ملا',
     processPayment: 'ادائیگی کی کارروائی',
     maximum: 'زیادہ سے زیادہ',
+    viewItems: 'اشیاء دیکھیں',
+    udharItems: 'ادھار اشیاء',
     
     // Reports
     reportsAnalytics: 'رپورٹس اور تجزیہ',
@@ -717,6 +725,10 @@ export const translations = {
     paymentType: 'ادائیگی کی قسم',
     allPayments: 'تمام ادائیگیاں',
     allBills: 'تمام بل',
+    allBillsList: 'تمام بل',
+    byCustomer: 'گاہک کے مطابق',
+    viewAllBills: 'تمام بل دیکھیں',
+    allBillsOf: 'کے تمام بل',
     cashOnly: 'صرف نقد',
     creditOnly: 'صرف ادھار',
     startDate: 'شروع کی تاریخ',

@@ -149,7 +149,19 @@ function VoiceBilling() {
   }
 
   const removeFromBill = (id) => {
+    const removedItem = billItems.find(item => item.id === id)
     setBillItems(billItems.filter(item => item.id !== id))
+    
+    // Restore stock back to local items state
+    if (removedItem && removedItem.item_id) {
+      setItems(prevItems => 
+        prevItems.map(i => 
+          i.item_id === removedItem.item_id 
+            ? { ...i, stock_quantity: i.stock_quantity + removedItem.quantity }
+            : i
+        )
+      )
+    }
   }
 
   const calculateTotal = () => {
