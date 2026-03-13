@@ -168,33 +168,33 @@ function BillHistory() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-md">
+          <div className="rounded-xl p-4 text-white shadow-md" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-xs">{t('todayTotal')}</p>
+                <p className="text-white opacity-80 text-xs">{t('todayTotal')}</p>
                 <p className="text-2xl font-bold mt-0.5">{formatCurrency(todaySummary.total_amount)}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-200" />
+              <TrendingUp className="w-8 h-8 text-white opacity-70" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-md">
+          <div className="rounded-xl p-4 text-white shadow-md" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-xs">{t('cashSales')}</p>
+                <p className="text-white opacity-80 text-xs">{t('cashSales')}</p>
                 <p className="text-2xl font-bold mt-0.5">{formatCurrency(todaySummary.cash_amount)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-200" />
+              <DollarSign className="w-8 h-8 text-white opacity-70" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl p-4 text-white shadow-md">
+          <div className="rounded-xl p-4 text-white shadow-md" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-100 text-xs">{t('udharSales')}</p>
+                <p className="text-white opacity-80 text-xs">{t('udharSales')}</p>
                 <p className="text-2xl font-bold mt-0.5">{formatCurrency(todaySummary.udhar_amount)}</p>
               </div>
-              <Receipt className="w-8 h-8 text-orange-200" />
+              <Receipt className="w-8 h-8 text-white opacity-70" />
             </div>
           </div>
         </div>
@@ -369,8 +369,8 @@ function BillHistory() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         bill.status === 'paid' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+                          ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300'
+                          : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300'
                       }`}>
                         {bill.status === 'paid' ? t('cash') : t('credit')}
                       </span>
@@ -445,8 +445,8 @@ function BillHistory() {
                       <span className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">#{bill.bill_id}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                         bill.status === 'paid'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-orange-100 text-orange-800'
+                          ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300'
+                          : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300'
                       }`}>
                         {bill.status === 'paid' ? t('cash') : t('credit')}
                       </span>

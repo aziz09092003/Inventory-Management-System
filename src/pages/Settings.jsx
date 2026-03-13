@@ -86,7 +86,7 @@ function Settings({ toggleTheme, isDarkMode }) {
             </label>
             <div className="flex gap-4">
               <button
-                onClick={() => !isDarkMode && toggleTheme()}
+                onClick={() => isDarkMode && toggleTheme()}
                 className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
                   !isDarkMode
                     ? 'border-gray-300 dark:border-gray-600'
@@ -98,7 +98,7 @@ function Settings({ toggleTheme, isDarkMode }) {
                 <p className="text-center font-medium">{t('light')}</p>
               </button>
               <button
-                onClick={() => isDarkMode && toggleTheme()}
+                onClick={() => !isDarkMode && toggleTheme()}
                 className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
                   isDarkMode
                     ? 'border-gray-300 dark:border-gray-600'

@@ -244,7 +244,7 @@ function Reports() {
                   <select
                     value={dateRange}
                     onChange={(e) => setDateRange(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#2C5F6F] dark:bg-gray-700 dark:text-white text-sm"
                   >
                     <option value="today">{t('today')}</option>
                     <option value="week">{t('thisWeek')}</option>
@@ -258,7 +258,10 @@ function Reports() {
                 <button
                   onClick={handleDownloadReport}
                   disabled={downloadLoading}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{backgroundColor: '#2C5F6F'}}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#234A57'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2C5F6F'}
                 >
                   {downloadLoading ? (
                     <>
@@ -278,22 +281,22 @@ function Reports() {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md p-4 text-white">
+            <div className="rounded-xl shadow-md p-4 text-white" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
               <p className="text-xs opacity-90 mb-0.5">{t('totalRevenue')}</p>
               <p className="text-2xl font-bold">₨ {reportData.totalRevenue.toLocaleString()}</p>
               <p className="text-xs mt-1.5 opacity-90">{dateRange === 'today' ? t('today') : t(dateRange === 'week' ? 'thisWeek' : dateRange === 'month' ? 'thisMonth' : 'thisYear')}</p>
             </div>
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
+            <div className="rounded-xl shadow-md p-4 text-white" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
               <p className="text-xs opacity-90 mb-0.5">{t('totalProfit')}</p>
               <p className="text-2xl font-bold">₨ {reportData.totalProfit.toLocaleString()}</p>
               <p className="text-xs mt-1.5 opacity-90">{t('profitMarginPct')}</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
+            <div className="rounded-xl shadow-md p-4 text-white" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
               <p className="text-xs opacity-90 mb-0.5">{t('totalTransactions')}</p>
               <p className="text-2xl font-bold">{reportData.totalTransactions}</p>
               <p className="text-xs mt-1.5 opacity-90">{t('salesCount')}</p>
             </div>
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-md p-4 text-white">
+            <div className="rounded-xl shadow-md p-4 text-white" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
               <p className="text-xs opacity-90 mb-0.5">{t('avgTransaction')}</p>
               <p className="text-2xl font-bold">₨ {reportData.avgTransaction.toLocaleString()}</p>
               <p className="text-xs mt-1.5 opacity-90">{t('perSale')}</p>
@@ -321,7 +324,7 @@ function Reports() {
                       color: '#fff'
                     }} 
                   />
-                  <Line type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6' }} />
+                  <Line type="monotone" dataKey="sales" stroke="#2C5F6F" strokeWidth={3} dot={{ fill: '#2C5F6F' }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -342,7 +345,7 @@ function Reports() {
                       color: '#fff'
                     }} 
                   />
-                  <Bar dataKey="count" fill="#10B981" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="count" fill="#5D9CAD" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

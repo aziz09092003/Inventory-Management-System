@@ -4,7 +4,7 @@ import { LayoutDashboard, Mic, Package, Book, Receipt, BarChart3, Settings, X, L
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 
-function Sidebar({ isOpen, toggleSidebar }) {
+function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
   const { t } = useLanguage()
   const { user, logout } = useAuth()
   const [profilePhoto, setProfilePhoto] = useState(null)
@@ -67,7 +67,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
 
       {/* Sidebar */}
       <aside
-        style={{ backgroundColor: '#2C5F6F' }}
+        style={{ backgroundColor: isDarkMode ? '#1B3A44' : '#2C5F6F' }}
         className={`fixed left-0 top-0 h-full w-64 shadow-lg transform transition-transform duration-300 z-50 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}
@@ -119,20 +119,17 @@ function Sidebar({ isOpen, toggleSidebar }) {
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.path === '/'}
               onClick={() => window.innerWidth < 1024 && toggleSidebar()}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-8 py-3.5 text-white transition-colors ${
-                  isActive ? 'border-l-4 border-white' : ''
+                `flex items-center gap-3 px-6 py-3.5 mx-3 rounded-lg transition-colors ${
+                  isActive ? 'font-semibold' : 'text-white hover:bg-white/10'
                 }`
               }
               style={({ isActive }) => ({
-                backgroundColor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent'
+                backgroundColor: isActive ? 'rgba(255,255,255,0.92)' : 'transparent',
+                color: isActive ? '#2C5F6F' : 'white',
               })}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-              onMouseLeave={(e) => {
-                const isActive = e.currentTarget.classList.contains('active')
-                e.currentTarget.style.backgroundColor = isActive ? 'rgba(255,255,255,0.15)' : 'transparent'
-              }}
             >
               <item.icon className="w-5 h-5" />
               <span className="font-medium text-base">{item.name}</span>

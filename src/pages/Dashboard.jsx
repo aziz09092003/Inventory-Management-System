@@ -7,10 +7,10 @@ import { useLanguage } from '../contexts/LanguageContext'
 function Dashboard() {
   const { t } = useLanguage()
   const [stats, setStats] = useState([
-    { titleKey: 'totalProducts', value: '0', change: '+0', bgColor: 'bg-emerald-50', iconColor: 'text-emerald-600', icon: Package },
+    { titleKey: 'totalProducts', value: '0', change: '+0', bgColor: 'rgba(44, 95, 111, 0.1)', iconColor: '#2C5F6F', icon: Package },
     { titleKey: 'orders', value: '0', change: '+0', bgColor: 'rgba(44, 95, 111, 0.1)', iconColor: '#2C5F6F', icon: Layers },
     { titleKey: 'totalStock', value: '0', change: '+0', bgColor: 'rgba(44, 95, 111, 0.1)', iconColor: '#2C5F6F', icon: TrendingUp },
-    { titleKey: 'outOfStock', value: '0', change: 'Alert', bgColor: 'bg-orange-50', iconColor: 'text-orange-600', icon: ShoppingBag },
+    { titleKey: 'outOfStock', value: '0', change: 'Alert', bgColor: 'rgba(44, 95, 111, 0.1)', iconColor: '#2C5F6F', icon: ShoppingBag },
   ])
   
   const [topItems, setTopItems] = useState([])
@@ -78,8 +78,8 @@ function Dashboard() {
           titleKey: 'totalProducts', 
           value: totalItems.toString(), 
           change: `${items.filter(i => i.stock_quantity > 0).length} ${t('inStock')}`, 
-          bgColor: 'bg-emerald-50',
-          iconColor: 'text-emerald-600',
+          bgColor: 'rgba(44, 95, 111, 0.1)',
+          iconColor: '#2C5F6F',
           icon: Package 
         },
         { 
@@ -102,8 +102,8 @@ function Dashboard() {
           titleKey: 'outOfStock', 
           value: items.filter(i => i.stock_quantity === 0).length.toString(), 
           change: lowStockCount > 0 ? `${lowStockCount} ${t('low')}` : t('allGood'), 
-          bgColor: 'bg-orange-50',
-          iconColor: 'text-orange-600',
+          bgColor: 'rgba(44, 95, 111, 0.1)',
+          iconColor: '#2C5F6F',
           icon: ShoppingBag 
         },
       ])
@@ -192,9 +192,9 @@ function Dashboard() {
 
   const shortcuts = [
     { name: t('voiceBilling'), path: '/voice-billing', icon: Mic, color: '#2C5F6F' },
-    { name: t('inventory'), path: '/inventory', icon: Package, color: 'bg-green-500' },
-    { name: t('udharKhata'), path: '/udhar', icon: Book, color: 'bg-yellow-500' },
-    { name: t('reports'), path: '/reports', icon: BarChart, color: 'bg-purple-500' },
+    { name: t('inventory'), path: '/inventory', icon: Package, color: '#2C5F6F' },
+    { name: t('udharKhata'), path: '/udhar', icon: Book, color: '#2C5F6F' },
+    { name: t('reports'), path: '/reports', icon: BarChart, color: '#2C5F6F' },
   ]
 
   return (

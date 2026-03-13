@@ -302,7 +302,7 @@ function UdharKhata() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
+        <div className="rounded-xl shadow-md p-4 text-white" style={{background: 'linear-gradient(135deg, #2C5F6F 0%, #3D7A8A 100%)'}}>
           <p className="text-xs opacity-90 mb-0.5">{t('totalPaid')}</p>
           <p className="text-2xl font-bold">Rs {totalPaid.toLocaleString()}</p>
           <p className="text-xs mt-1.5 opacity-90">{t('completedPayments')}</p>
@@ -423,8 +423,8 @@ function UdharKhata() {
                   <span
                     className={`text-xs font-semibold px-3 py-1 rounded-full ${
                       customer.paid
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300'
+                        : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300'
                     }`}
                   >
                     {customer.paid ? t('paid').toUpperCase() : t('pending').toUpperCase()}

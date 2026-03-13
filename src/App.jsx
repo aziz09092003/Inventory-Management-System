@@ -37,8 +37,8 @@ function AppLayout({ children, toggleSidebar, toggleTheme, isDarkMode, isSidebar
     <div className={isDarkMode ? 'dark' : ''}>
       <div className="min-h-screen" style={{backgroundColor: isDarkMode ? '#1F2937' : '#E8F4F8'}}>
         <Header toggleSidebar={toggleSidebar} toggleTheme={toggleTheme} isDarkMode={isDarkMode} />
-        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <main className="lg:ml-64 pt-24 p-6 md:p-8">
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} isDarkMode={isDarkMode} />
+        <main className="lg:ml-64 px-6 md:px-8 pb-6 md:pb-8 pt-24">
           {children}
         </main>
       </div>

@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
-import { Menu, Sun, Moon, Bell, Search, LogOut, User } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Menu, Sun, Moon, Bell, Search, LogOut, User, Package, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
+import { itemsAPI } from '../services/api'
 
 function Header({ toggleSidebar, toggleTheme, isDarkMode }) {
   const { t } = useLanguage()
@@ -10,6 +11,43 @@ function Header({ toggleSidebar, toggleTheme, isDarkMode }) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showBellMenu, setShowBellMenu] = useState(false)
+  const [notifications, setNotifications] = useState([])
+
+  const menuRef = useRef(null)
+  const bellRef = useRef(null)
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowUserMenu(false)
+      }
+      if (bellRef.current && !bellRef.current.contains(e.target)) {
+        setShowBellMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
+  // Fetch stock notifications
+  useEffect(() => {
+    if (!user) return
+    itemsAPI.getAll().then((res) => {
+      if (res.data) {
+        const alerts = []
+        res.data.forEach((item) => {
+          if (item.stock_quantity <= 0) {
+            alerts.push({ id: item.id, name: item.name, type: 'out', qty: item.stock_quantity })
+          } else if (item.reorder_level != null && item.stock_quantity <= item.reorder_level) {
+            alerts.push({ id: item.id, name: item.name, type: 'low', qty: item.stock_quantity, reorder: item.reorder_level })
+          }
+        })
+        setNotifications(alerts)
+      }
+    }).catch(() => {})
+  }, [user])
 
   const getFirstName = () => {
     if (user?.username) {
@@ -67,13 +105,54 @@ function Header({ toggleSidebar, toggleTheme, isDarkMode }) {
           </button>
 
           {/* Notifications */}
-          <button className="p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
-            <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+          <div className="relative" ref={bellRef}>
+            <button
+              onClick={() => setShowBellMenu(!showBellMenu)}
+              className="p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+            >
+              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-0.5">
+                  {notifications.length > 9 ? '9+' : notifications.length}
+                </span>
+              )}
+            </button>
+
+            {showBellMenu && (
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <p className="font-semibold text-gray-800 dark:text-white">Stock Alerts</p>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{notifications.length} alert{notifications.length !== 1 ? 's' : ''}</span>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">All items are well stocked</div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <div key={n.id} className="flex items-start gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                        {n.type === 'out' ? (
+                          <Package className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-white truncate">{n.name}</p>
+                          {n.type === 'out' ? (
+                            <p className="text-xs text-red-500">Out of stock</p>
+                          ) : (
+                            <p className="text-xs text-yellow-600 dark:text-yellow-400">Low stock — {n.qty} left (reorder at {n.reorder})</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* User Profile Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
