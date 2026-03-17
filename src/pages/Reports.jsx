@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Calendar, TrendingUp, Download, FileSpreadsheet } from 'lucide-react'
-import { itemsAPI, salesAPI, customersAPI, udharsAPI, reportsAPI } from '../services/api'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Calendar, TrendingUp, Download } from 'lucide-react'
+import { itemsAPI, salesAPI, reportsAPI } from '../services/api'
 import AlertDialog from '../components/AlertDialog'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -100,8 +100,8 @@ function Reports() {
         salesAPI.getAll()
       ])
 
-      const items = itemsRes.data
-      const allSales = salesRes.data
+      const items = Array.isArray(itemsRes.data) ? itemsRes.data : []
+      const allSales = Array.isArray(salesRes.data) ? salesRes.data : []
       const { start, end } = getDateRange()
 
       // Filter sales by date range
@@ -122,23 +122,40 @@ function Reports() {
       // Calculate profit (assuming 20% profit margin)
       const totalProfit = totalRevenue * 0.2
 
-      // Generate sales trend data
-      const salesByDate = {}
+      // Generate sales trend data with stable time buckets (prevents weekday merge bugs)
+      const salesByBucket = {}
       filteredSales.forEach(sale => {
-        const dateKey = new Date(sale.sale_date).toLocaleDateString('en-US', { weekday: 'short' })
-        if (!salesByDate[dateKey]) {
-          salesByDate[dateKey] = 0
-        }
+        const saleDate = new Date(sale.sale_date)
+        if (Number.isNaN(saleDate.getTime())) return
+
         const item = items.find(i => i.item_id === sale.item_id)
-        if (item) {
-          salesByDate[dateKey] += sale.quantity_sold * item.unit_price
+        if (!item) return
+
+        let bucketKey = ''
+        let label = ''
+        let sortKey = 0
+
+        if (dateRange === 'year') {
+          const month = saleDate.getMonth() + 1
+          bucketKey = `${saleDate.getFullYear()}-${String(month).padStart(2, '0')}`
+          label = saleDate.toLocaleDateString('en-US', { month: 'short' })
+          sortKey = new Date(saleDate.getFullYear(), saleDate.getMonth(), 1).getTime()
+        } else {
+          bucketKey = saleDate.toISOString().slice(0, 10)
+          label = saleDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          sortKey = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate()).getTime()
         }
+
+        if (!salesByBucket[bucketKey]) {
+          salesByBucket[bucketKey] = { label, sales: 0, sortKey }
+        }
+
+        salesByBucket[bucketKey].sales += (sale.quantity_sold || 0) * (item.unit_price || 0)
       })
 
-      const salesTrendData = Object.entries(salesByDate).map(([date, sales]) => ({
-        date,
-        sales: Math.round(sales)
-      }))
+      const salesTrendData = Object.values(salesByBucket)
+        .sort((a, b) => a.sortKey - b.sortKey)
+        .map(entry => ({ date: entry.label, sales: Math.round(entry.sales) }))
 
       // Generate item frequency data
       const itemSalesCount = {}

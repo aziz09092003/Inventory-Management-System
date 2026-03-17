@@ -47,12 +47,8 @@ function VoiceBilling() {
     try {
       setLoading(true)
       const itemsRes = await itemsAPI.getAll()
-      console.log('Loaded items:', itemsRes.data)
-      // Log first item to see structure
-      if (itemsRes.data.length > 0) {
-        console.log('First item structure:', itemsRes.data[0])
-      }
-      setItems(itemsRes.data)
+      const itemsList = Array.isArray(itemsRes.data) ? itemsRes.data : []
+      setItems(itemsList)
     } catch (error) {
       console.error('Error fetching items:', error)
       showAlert('error', t('alertError'), t('failedToLoadItems') + ': ' + (error.message || t('pleaseTryAgain')))
@@ -193,10 +189,13 @@ function VoiceBilling() {
         customersAPI.getAll(),
         udharsAPI.getAll()
       ])
+
+      const customersList = Array.isArray(customersRes.data) ? customersRes.data : []
+      const udharsList = Array.isArray(udharsRes.data) ? udharsRes.data : []
       
       // Merge customers with their udhar data (similar to UdharKhata page)
-      const customersWithUdhar = customersRes.data.map(customer => {
-        const udhar = udharsRes.data.find(u => u.customer_id === customer.customer_id)
+      const customersWithUdhar = customersList.map(customer => {
+        const udhar = udharsList.find(u => u.customer_id === customer.customer_id)
         return {
           customer_id: customer.customer_id,
           customer_name: customer.customer_name,
@@ -207,7 +206,6 @@ function VoiceBilling() {
         }
       })
       
-      console.log('Customers with udhar:', customersWithUdhar)
       setAllUdhars(customersWithUdhar)
     } catch (error) {
       console.error('Error fetching udhars:', error)
@@ -231,10 +229,13 @@ function VoiceBilling() {
         customersAPI.getAll(),
         udharsAPI.getAll()
       ])
+
+      const customersList = Array.isArray(customersRes.data) ? customersRes.data : []
+      const udharsList = Array.isArray(udharsRes.data) ? udharsRes.data : []
       
       // Merge customers with their udhar data
-      const customersWithUdhar = customersRes.data.map(customer => {
-        const udhar = udharsRes.data.find(u => u.customer_id === customer.customer_id)
+      const customersWithUdhar = customersList.map(customer => {
+        const udhar = udharsList.find(u => u.customer_id === customer.customer_id)
         return {
           customer_id: customer.customer_id,
           customer_name: customer.customer_name,
@@ -250,7 +251,6 @@ function VoiceBilling() {
       const results = customersWithUdhar.filter(customer => 
         customer.customer_name && customer.customer_name.toLowerCase().includes(searchName.toLowerCase())
       )
-      console.log('Search results for "' + searchName + '":', results)
       setUdharSearchResults(results)
     } catch (error) {
       console.error('Error searching customers:', error)
@@ -268,7 +268,7 @@ function VoiceBilling() {
       
       // First, update inventory and create sales records
       const itemsRes = await itemsAPI.getAll()
-      const currentItems = itemsRes.data
+      const currentItems = Array.isArray(itemsRes.data) ? itemsRes.data : []
 
       // Verify stock availability
       for (const billItem of billItems) {
@@ -317,7 +317,7 @@ function VoiceBilling() {
       try {
         setLoading(true)
         const itemsRes = await itemsAPI.getAll()
-        const currentItems = itemsRes.data
+        const currentItems = Array.isArray(itemsRes.data) ? itemsRes.data : []
 
         // Verify stock availability for all items
         for (const billItem of billItems) {

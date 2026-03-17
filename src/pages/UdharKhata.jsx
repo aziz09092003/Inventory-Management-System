@@ -53,8 +53,8 @@ function UdharKhata() {
         customersAPI.getAll(),
         udharsAPI.getAll()
       ])
-      setCustomers(customersRes.data)
-      setUdhars(udharsRes.data)
+      setCustomers(Array.isArray(customersRes.data) ? customersRes.data : [])
+      setUdhars(Array.isArray(udharsRes.data) ? udharsRes.data : [])
     } catch (err) {
       setError(t('failedToLoadData'))
       console.error('Error fetching data:', err)

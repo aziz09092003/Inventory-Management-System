@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, Package, AlertTriangle, Mic, Book, BarChart, Layers, ShoppingBag } from 'lucide-react'
-import { itemsAPI, salesAPI, customersAPI, udharsAPI } from '../services/api'
+import { TrendingUp, Package, BarChart, Layers, ShoppingBag } from 'lucide-react'
+import { itemsAPI, salesAPI, customersAPI } from '../services/api'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function Dashboard() {
@@ -29,18 +29,15 @@ function Dashboard() {
       setLoading(true)
       
       // Fetch all necessary data
-      const [itemsRes, salesRes, customersRes, udharsRes] = await Promise.all([
+      const [itemsRes, salesRes, customersRes] = await Promise.all([
         itemsAPI.getAll(),
         salesAPI.getAll(),
-        customersAPI.getAll(),
-        udharsAPI.getAll()
+        customersAPI.getAll()
       ])
 
-      const items = itemsRes.data
-      const sales = salesRes.data
-      const customers = customersRes.data
-      const udhars = udharsRes.data
-
+      const items = Array.isArray(itemsRes.data) ? itemsRes.data : []
+      const sales = Array.isArray(salesRes.data) ? salesRes.data : []
+      const customers = Array.isArray(customersRes.data) ? customersRes.data : []
       // Calculate Today's Sales
       const today = new Date().toISOString().split('T')[0]
       const todaySales = sales.filter(sale => {
@@ -48,29 +45,12 @@ function Dashboard() {
         return saleDate === today
       })
       
-      // Calculate revenue from today's sales
-      const todayRevenue = todaySales.reduce((sum, sale) => {
-        const item = items.find(i => i.item_id === sale.item_id)
-        if (item) {
-          return sum + (sale.quantity_sold * item.unit_price)
-        }
-        return sum
-      }, 0)
-
       // Calculate Total Items
       const totalItems = items.length
 
       // Calculate Low Stock Items (stock <= 20)
       const lowStock = items.filter(item => item.stock_quantity > 0 && item.stock_quantity <= 20)
       const lowStockCount = lowStock.length
-
-      // Calculate Total Udhar Amount and customers with udhar
-      const totalUdhar = udhars.reduce((sum, udhar) => {
-        return sum + (udhar.total || 0)
-      }, 0)
-      const customersWithUdhar = udhars.filter(udhar => {
-        return (udhar.total || 0) > 0
-      }).length
 
       // Update stats
       setStats([
@@ -189,13 +169,6 @@ function Dashboard() {
       setLoading(false)
     }
   }
-
-  const shortcuts = [
-    { name: t('voiceBilling'), path: '/voice-billing', icon: Mic, color: '#2C5F6F' },
-    { name: t('inventory'), path: '/inventory', icon: Package, color: '#2C5F6F' },
-    { name: t('udharKhata'), path: '/udhar', icon: Book, color: '#2C5F6F' },
-    { name: t('reports'), path: '/reports', icon: BarChart, color: '#2C5F6F' },
-  ]
 
   return (
     <div className="space-y-4 mt-12">
