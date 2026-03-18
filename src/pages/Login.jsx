@@ -19,7 +19,7 @@ const Login = () => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const { login, loginWithVoice } = useAuth();
+  const { login, loginWithVoice, loginAsGuest } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -31,10 +31,17 @@ const Login = () => {
       await login({ username: email, password });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password');
+      const serverMessage = err?.response?.data?.detail;
+      const timeoutMessage = err?.code === 'ECONNABORTED' || String(err?.message || '').toLowerCase().includes('timeout');
+      setError(serverMessage || (timeoutMessage ? 'Server is not responding. Please try again.' : 'Unable to login right now. Please try again.'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGuestLogin = () => {
+    loginAsGuest();
+    navigate('/');
   };
 
   // Voice recording
@@ -105,21 +112,21 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f0f2f5' }}>
+    <div className="h-screen overflow-hidden flex items-center justify-center px-4 py-3 md:py-4" style={{ backgroundColor: '#f0f2f5' }}>
       {/* Main Card */}
       <div
-        className="flex w-full max-w-[960px] bg-white rounded-3xl overflow-hidden"
-        style={{ minHeight: '560px', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
+        className="flex w-full max-w-[900px] h-[calc(100vh-24px)] md:h-[calc(100vh-32px)] max-h-[720px] bg-white rounded-3xl overflow-hidden"
+        style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
       >
         {/* LEFT SIDE — Form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-10 py-10">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-7 md:px-9 md:py-8 overflow-y-auto">
           {/* Brand */}
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">{t('brandName')}</h1>
-          <p className="text-sm text-gray-400 mb-8">{t('brandTagline')}</p>
+          <p className="text-sm text-gray-400 mb-6">{t('brandTagline')}</p>
 
           {!showVoiceLogin ? (
             <>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">{t('login')}</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('login')}</h2>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
@@ -127,7 +134,7 @@ const Login = () => {
                 </div>
               )}
 
-              <form onSubmit={handleEmailLogin} className="space-y-4">
+              <form onSubmit={handleEmailLogin} className="space-y-3">
                 {/* Email */}
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -142,7 +149,7 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                    className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
                   />
                 </div>
 
@@ -160,7 +167,7 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                    className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
                   />
                 </div>
 
@@ -182,7 +189,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full text-sm transition disabled:opacity-50"
+                  className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full text-sm transition disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -193,16 +200,24 @@ const Login = () => {
                     t('logIn')
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  className="w-full py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold rounded-full text-sm transition"
+                >
+                  Continue as Guest (Demo)
+                </button>
               </form>
 
               {/* Voice Login */}
-              <div className="mt-6 flex flex-col items-center">
+              <div className="mt-4 flex flex-col items-center">
                 <button
                   onClick={() => setShowVoiceLogin(true)}
                   className="flex flex-col items-center gap-1 group"
                 >
-                  <div className="w-14 h-14 rounded-xl border-2 border-blue-200 flex items-center justify-center group-hover:border-blue-400 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <div className="w-12 h-12 rounded-xl border-2 border-blue-200 flex items-center justify-center group-hover:border-blue-400 transition">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
                       <path d="M19 10v2a7 7 0 01-14 0v-2" />
                       <line x1="12" y1="19" x2="12" y2="23" />
@@ -214,7 +229,7 @@ const Login = () => {
               </div>
 
               {/* Register link */}
-              <p className="text-center text-sm text-gray-500 mt-5">
+              <p className="text-center text-sm text-gray-500 mt-4">
                 {t('dontHaveAccount')}{' '}
                 <Link to="/register" className="text-blue-500 hover:underline font-medium">
                   {t('registerHere')}
@@ -224,7 +239,7 @@ const Login = () => {
           ) : (
             /* ─── Voice Login Panel ─── */
             <>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">{t('voiceLoginTitle')}</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('voiceLoginTitle')}</h2>
 
               {voiceError && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
@@ -232,7 +247,7 @@ const Login = () => {
                 </div>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* Email for voice login */}
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -246,25 +261,25 @@ const Login = () => {
                     placeholder={t('emailAddress')}
                     value={voiceEmail}
                     onChange={(e) => setVoiceEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                    className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
                   />
                 </div>
 
                 {/* Mic button */}
-                <div className="flex flex-col items-center py-4">
+                <div className="flex flex-col items-center py-2">
                   <button
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={voiceLoading}
-                    className={`w-20 h-20 rounded-full flex items-center justify-center transition shadow-lg ${
+                    className={`w-16 h-16 rounded-full flex items-center justify-center transition shadow-lg ${
                       isRecording
                         ? 'bg-red-500 hover:bg-red-600 animate-pulse'
                         : 'bg-blue-500 hover:bg-blue-600'
                     } disabled:opacity-50`}
                   >
                     {voiceLoading ? (
-                      <svg className="animate-spin h-8 w-8 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                      <svg className="animate-spin h-7 w-7 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
                     ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
                         <path d="M19 10v2a7 7 0 01-14 0v-2" />
                         <line x1="12" y1="19" x2="12" y2="23" />
@@ -272,7 +287,7 @@ const Login = () => {
                       </svg>
                     )}
                   </button>
-                  <p className="text-sm text-gray-500 mt-3">
+                  <p className="text-sm text-gray-500 mt-2">
                     {voiceLoading ? t('verifying') : isRecording ? t('recordingClickToStop') : t('tapToSpeak')}
                   </p>
                 </div>
@@ -281,7 +296,7 @@ const Login = () => {
               {/* Back to email login */}
               <button
                 onClick={() => { setShowVoiceLogin(false); setVoiceError(''); }}
-                className="w-full py-3 border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold rounded-full text-sm transition mt-2"
+                className="w-full py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold rounded-full text-sm transition mt-2"
               >
                 {t('backToEmailLogin')}
               </button>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import AlertDialog from '../components/AlertDialog';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -10,6 +11,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -31,7 +33,11 @@ const Register = () => {
     setLoading(true);
     try {
       await register({ username, email, password });
-      navigate('/login');
+      setShowSuccessDialog(true);
+      setTimeout(() => {
+        setShowSuccessDialog(false);
+        navigate('/login');
+      }, 2500);
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Try again.');
     } finally {
@@ -40,19 +46,19 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f0f2f5' }}>
+    <div className="h-screen overflow-hidden flex items-center justify-center px-4 py-3 md:py-4" style={{ backgroundColor: '#f0f2f5' }}>
       {/* Main Card */}
       <div
-        className="flex w-full max-w-[960px] bg-white rounded-3xl overflow-hidden"
-        style={{ minHeight: '600px', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
+        className="flex w-full max-w-[900px] h-[calc(100vh-24px)] md:h-[calc(100vh-32px)] max-h-[720px] bg-white rounded-3xl overflow-hidden"
+        style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
       >
         {/* LEFT SIDE — Form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-10 py-10">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-7 md:px-9 md:py-8 overflow-y-auto">
           {/* Brand */}
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">{t('brandName')}</h1>
-          <p className="text-sm text-gray-400 mb-8">{t('brandTagline')}</p>
+          <p className="text-sm text-gray-400 mb-6">{t('brandTagline')}</p>
 
-          <h2 className="text-xl font-bold text-gray-900 mb-6">{t('createAccount')}</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">{t('createAccount')}</h2>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
@@ -60,7 +66,7 @@ const Register = () => {
             </div>
           )}
 
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-3">
             {/* Username */}
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -75,7 +81,7 @@ const Register = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
               />
             </div>
 
@@ -93,7 +99,7 @@ const Register = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
               />
             </div>
 
@@ -111,7 +117,7 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
               />
             </div>
 
@@ -128,7 +134,7 @@ const Register = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition"
               />
             </div>
 
@@ -136,7 +142,7 @@ const Register = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full text-sm transition disabled:opacity-50"
+              className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-full text-sm transition disabled:opacity-50"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -150,7 +156,7 @@ const Register = () => {
           </form>
 
           {/* Login link */}
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-gray-500 mt-4">
             {t('alreadyHaveAccount')}{' '}
             <Link to="/login" className="text-blue-500 hover:underline font-medium">
               {t('logIn')}
@@ -167,6 +173,19 @@ const Register = () => {
           />
         </div>
       </div>
+
+      <AlertDialog
+        open={showSuccessDialog}
+        type="success"
+        title="Registration Successful"
+        message="Your account has been created successfully. You will be redirected to the login page in a few seconds."
+        confirmText="OK"
+        onConfirm={() => {
+          setShowSuccessDialog(false);
+          navigate('/login');
+        }}
+        showCancel={false}
+      />
     </div>
   );
 };

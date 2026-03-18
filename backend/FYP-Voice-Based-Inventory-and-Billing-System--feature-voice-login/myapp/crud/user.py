@@ -152,8 +152,8 @@ async def get_user_by_email(db: AsyncSession, email: str):
     res = await db.execute(select(User).where(User.email.ilike(email.strip())))
     return res.scalar_one_or_none()
 
-async def get_all_users(db: AsyncSession):
-    res = await db.execute(select(User))
+async def get_all_users(db: AsyncSession, current_user: User):
+    res = await db.execute(select(User).where(User.user_id == current_user.user_id))
     return res.scalars().all()
 
 # ---------------------------

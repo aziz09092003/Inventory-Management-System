@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
 myapp = FastAPI(lifespan=lifespan)
 
 # CORS setup
-origins = ["http://127.0.0.1:5173", "http://localhost:5173", "null"]
+origins = ["http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:5174", "http://localhost:5174", "null"]
 myapp.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -45,7 +45,7 @@ from myapp.utils.errors import error_map
 # Helper: add CORS headers to error responses so the browser doesn't block them
 def _cors_headers(request: Request) -> dict:
     origin = request.headers.get("origin", "")
-    allowed = {"http://127.0.0.1:5173", "http://localhost:5173"}
+    allowed = {"http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:5174", "http://localhost:5174"}
     if origin in allowed:
         return {
             "access-control-allow-origin": origin,
@@ -110,3 +110,6 @@ myapp.include_router(udhar)
 myapp.include_router(bill)
 myapp.include_router(report)
 myapp.include_router(forcast)
+
+# Alias for uvicorn default convention: uvicorn myapp.main:app
+app = myapp

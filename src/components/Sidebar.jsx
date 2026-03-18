@@ -3,11 +3,13 @@ import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Mic, Package, Book, Receipt, BarChart3, Settings, X, LogOut, ShoppingCart, Layers, TrendingUp, DollarSign } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
+import AlertDialog from './AlertDialog'
 
 function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
   const { t } = useLanguage()
   const { user, logout } = useAuth()
   const [profilePhoto, setProfilePhoto] = useState(null)
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   useEffect(() => {
     // Load profile photo from localStorage
@@ -25,6 +27,7 @@ function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
         const base64String = reader.result
         setProfilePhoto(base64String)
         localStorage.setItem('profilePhoto', base64String)
+        window.dispatchEvent(new Event('ims_profile_photo_updated'))
       }
       reader.readAsDataURL(file)
     }
@@ -43,6 +46,11 @@ function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
   ]
 
   const handleLogout = () => {
+    setShowLogoutDialog(true)
+  }
+
+  const confirmLogout = () => {
+    setShowLogoutDialog(false)
     logout()
     toggleSidebar()
   }
@@ -80,10 +88,10 @@ function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
         </div>
 
         {/* Profile Section */}
-        <div className="px-6 py-6 border-b border-white border-opacity-20">
+        <div className="px-5 py-4 border-b border-white border-opacity-20">
           <div className="flex flex-col items-center">
-            <div className="relative mb-3">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-xl font-bold overflow-hidden" style={{ color: '#2C5F6F' }}>
+            <div className="relative mb-2">
+              <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-lg font-bold overflow-hidden" style={{ color: '#2C5F6F' }}>
                 {profilePhoto ? (
                   <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
@@ -92,7 +100,7 @@ function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
               </div>
               <label 
                 htmlFor="profile-upload" 
-                className="absolute bottom-0 right-0 w-5 h-5 bg-white rounded-full flex items-center justify-center cursor-pointer shadow-md"
+                className="absolute bottom-0 right-0 w-[18px] h-[18px] bg-white rounded-full flex items-center justify-center cursor-pointer shadow-md"
                 style={{ color: '#2C5F6F' }}
                 title="Upload photo"
               >
@@ -108,7 +116,7 @@ function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
                 onChange={handleProfilePhotoUpload}
               />
             </div>
-            <h3 className="text-white font-semibold text-base mb-1">{user?.username || 'User'}</h3>
+            <h3 className="text-white font-semibold text-sm mb-0.5">{user?.username || 'User'}</h3>
             <p className="text-white text-opacity-70 text-xs">{user?.email || 'user@example.com'}</p>
           </div>
         </div>
@@ -138,19 +146,31 @@ function Sidebar({ isOpen, toggleSidebar, isDarkMode }) {
         </nav>
 
         {/* Logout Button */}
-        <div className="p-4 border-t border-white border-opacity-20">
+        <div className="p-3 border-t border-white border-opacity-20">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-6 py-3 text-white transition-colors w-full rounded-lg"
+            className="flex items-center gap-2.5 px-4 py-2.5 text-white transition-colors w-full rounded-lg"
             style={{ backgroundColor: 'transparent' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-[18px] h-[18px]" />
             <span className="font-medium">{t('logout')}</span>
           </button>
         </div>
       </aside>
+
+      <AlertDialog
+        open={showLogoutDialog}
+        type="warning"
+        title="Confirm Logout"
+        message="Are you sure you want to log out? You will be switched to guest mode."
+        confirmText="Yes, Logout"
+        cancelText="Cancel"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutDialog(false)}
+        showCancel={true}
+      />
     </>
   )
 }

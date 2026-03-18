@@ -1,22 +1,35 @@
 import React, { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Globe, Moon, Sun, User, Users, Mic, MicOff, CheckCircle } from 'lucide-react'
+import { Settings as SettingsIcon, Globe, Moon, Sun, User, Users, Mic, MicOff, CheckCircle, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 
 function Settings({ toggleTheme, isDarkMode }) {
   const { language, changeLanguage, t } = useLanguage()
-  const { user, registerVoice, hasVoiceRegistered } = useAuth()
+  const { user, registerVoice, hasVoiceRegistered, updateProfile } = useAuth()
   const [voiceStatus, setVoiceStatus] = useState({ has_voice: false, loading: true })
   const [voiceRegistering, setVoiceRegistering] = useState(false)
   const [voiceMessage, setVoiceMessage] = useState('')
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [voiceData, setVoiceData] = useState(null)
-  const paragraph = 'Please read: "The quick brown fox jumps over the lazy dog. My voice is my password verify."'
+  const [editUsername, setEditUsername] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editPassword, setEditPassword] = useState('')
+  const [editConfirmPassword, setEditConfirmPassword] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editMessage, setEditMessage] = useState('')
+  const paragraph = t('voiceRegistrationParagraph')
 
   // Check voice status on mount
   useEffect(() => {
     checkVoiceStatus()
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      setEditUsername(user.username || '')
+      setEditEmail(user.email || '')
+    }
   }, [user])
 
   const checkVoiceStatus = () => {
@@ -43,26 +56,67 @@ function Settings({ toggleTheme, isDarkMode }) {
     }, 5000)
   }
 
-  const handleVoiceRegister = () => {
+  const handleVoiceRegister = async () => {
     if (!voiceData) {
-      setVoiceMessage('Please record your voice first')
+      setVoiceMessage(t('pleaseRecordVoiceFirst'))
       return
     }
 
     setVoiceRegistering(true)
     
-    const result = registerVoice(voiceData)
+    const result = await registerVoice(voiceData)
     
     if (result.success) {
-      setVoiceMessage('Voice registered successfully! You can now login with your voice.')
+      setVoiceMessage(t('voiceRegisteredSuccessMessage'))
       setVoiceStatus({ has_voice: true, loading: false })
       setShowVoiceRecorder(false)
       setVoiceData(null)
     } else {
-      setVoiceMessage(result.message || 'Voice registration failed')
+      setVoiceMessage(result.message || t('voiceRegistrationFailed'))
     }
     
     setVoiceRegistering(false)
+  }
+
+  const handleProfileSave = async (e) => {
+    e.preventDefault()
+    setEditMessage('')
+
+    if (!editUsername.trim()) {
+      setEditMessage(t('usernameRequired'))
+      return
+    }
+    if (!editEmail.trim()) {
+      setEditMessage(t('emailRequired'))
+      return
+    }
+    if (editPassword && editPassword.length < 6) {
+      setEditMessage(t('passwordMinLength'))
+      return
+    }
+    if (editPassword && editPassword !== editConfirmPassword) {
+      setEditMessage(t('passwordsDoNotMatch'))
+      return
+    }
+
+    setEditLoading(true)
+    const payload = {
+      username: editUsername.trim(),
+      email: editEmail.trim(),
+    }
+    if (editPassword) {
+      payload.password = editPassword
+    }
+
+    const result = await updateProfile(payload)
+    if (result.success) {
+      setEditMessage(t('profileUpdatedSuccessfully'))
+      setEditPassword('')
+      setEditConfirmPassword('')
+    } else {
+      setEditMessage(result.message || t('failedToUpdateProfile'))
+    }
+    setEditLoading(false)
   }
 
   return (
@@ -173,6 +227,86 @@ function Settings({ toggleTheme, isDarkMode }) {
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <p>{t('noUserLoggedIn')}</p>
           </div>
+        )}
+      </div>
+
+      {/* Edit Account Info */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Lock className="w-5 h-5" style={{color: '#2C5F6F'}} />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{t('editAccountInfo')}</h2>
+        </div>
+
+        {!user ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('pleaseLoginToEditAccount')}</p>
+        ) : (
+          <form className="space-y-3" onSubmit={handleProfileSave}>
+            {editMessage && (
+              <div className={`p-3 rounded-lg text-sm ${
+                editMessage.toLowerCase().includes('success')
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {editMessage}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('username')}</label>
+              <input
+                type="text"
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white text-sm"
+                style={{outlineColor: '#2C5F6F'}}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('email')}</label>
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white text-sm"
+                style={{outlineColor: '#2C5F6F'}}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('newPassword')}</label>
+                <input
+                  type="password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder={t('leaveEmptyToKeepCurrent')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white text-sm"
+                  style={{outlineColor: '#2C5F6F'}}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('confirmPassword')}</label>
+                <input
+                  type="password"
+                  value={editConfirmPassword}
+                  onChange={(e) => setEditConfirmPassword(e.target.value)}
+                  placeholder={t('reEnterNewPassword')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 dark:bg-gray-700 dark:text-white text-sm"
+                  style={{outlineColor: '#2C5F6F'}}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={editLoading}
+              className="text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+              style={{backgroundColor: '#2C5F6F'}}
+            >
+              {editLoading ? t('saving') : t('saveChanges')}
+            </button>
+          </form>
         )}
       </div>
 

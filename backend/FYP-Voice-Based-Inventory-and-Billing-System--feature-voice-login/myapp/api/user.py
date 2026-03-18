@@ -9,6 +9,7 @@ from myapp.crud.user import (
     update_user_by_id
 )
 from myapp.database.session import get_db
+from myapp.models.user import User
 from myapp.schemas.user import (
     UserRegister, UserRead, PasswordResetConfirm, ProfileUpdate,
     UserVoiceLogin, VoiceSamplesSave
@@ -47,7 +48,14 @@ async def login(payload: OAuth2PasswordRequestForm = Depends(), db: AsyncSession
 # Update Profile
 # ---------------------------
 @router.patch("/users/{user_id}", status_code=status.HTTP_200_OK)
-async def patch_user_profile(user_id: int, payload: ProfileUpdate, db: AsyncSession = Depends(get_db)):
+async def patch_user_profile(
+    user_id: int,
+    payload: ProfileUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="آپ صرف اپنا پروفائل اپڈیٹ کر سکتے ہیں")
     updated_user = await update_user_by_id(db, user_id, payload)
     if not updated_user:
         raise HTTPException(
@@ -94,15 +102,28 @@ async def reset_password_confirm(payload: PasswordResetConfirm, db: AsyncSession
 # Get Users
 # ---------------------------
 @router.get("/users", response_model=List[UserRead])
-async def get_users(db: AsyncSession = Depends(get_db)):
-    return await get_all_users(db)
+async def get_users(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return await get_all_users(db, current_user)
+
+# ---------------------------
+# Get Current User
+# ---------------------------
+@router.get("/me", response_model=UserRead)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 # ---------------------------
 # Delete User
 # ---------------------------
 @router.delete("/delete_user")
-async def delete_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_user_endpoint(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     try:
+        if current_user.user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="آپ صرف اپنا اکاؤنٹ حذف کر سکتے ہیں")
         result = await delete_user(db, user_id)
         if not result:
             raise HTTPException(
